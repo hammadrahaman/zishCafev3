@@ -635,6 +635,16 @@ export default function HomePage() {
     }
   }
 
+  // Add this function in your main component
+  const updateMobileMenuItemQuantity = (item: MenuItem, newQuantity: number) => {
+    const cartItem = cart.find((cartItem) => cartItem.id === item.id)
+    if (cartItem) {
+      updateCartItemQuantity(cartItem.cartId, newQuantity)
+    } else if (newQuantity > 0) {
+      addToCart(item, newQuantity)
+    }
+  }
+
   // Updated scrollToSection function with header offset
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId)
@@ -1018,7 +1028,9 @@ export default function HomePage() {
             <MobileMenuSearch
               menuItems={menuItems}
               categories={categories}
+              cart={cart} // Pass main cart state
               onAddToCart={handleAddToCart}
+              onUpdateQuantity={updateMobileMenuItemQuantity} // Pass quantity update function
               selectedCategory={selectedCategory}
               onCategoryChange={setSelectedCategory}
             />
