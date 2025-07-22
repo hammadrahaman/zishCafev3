@@ -59,6 +59,8 @@ interface Special {
 
 export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userType, setUserType] = useState<"admin" | "superadmin" | null>(null) // Add this line
+  const [currentUser, setCurrentUser] = useState("") // Add this line
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [orders, setOrders] = useState<Order[]>([])
@@ -109,10 +111,24 @@ export default function AdminPage() {
 
   // Check if user is already logged in
   useEffect(() => {
+    setIsClient(true)
+    
+    // Restore login session
     const savedLogin = localStorage.getItem("adminLoggedIn")
-    if (savedLogin === "true") {
+    const savedUserType = localStorage.getItem("userType")
+    const savedCurrentUser = localStorage.getItem("currentUser")
+    
+    if (savedLogin === "true" && savedUserType && savedCurrentUser) {
       setIsLoggedIn(true)
+      setUserType(savedUserType as "admin" | "superadmin")
+      setCurrentUser(savedCurrentUser)
     }
+
+    // Load orders and specials
+    const savedOrders = JSON.parse(localStorage.getItem("cafeOrders") || "[]")
+    setOrders(savedOrders)
+    const savedSpecials = JSON.parse(localStorage.getItem("todaysSpecials") || "[]")
+    setTodaysSpecials(savedSpecials)
   }, [])
 
   useEffect(() => {
@@ -149,12 +165,26 @@ export default function AdminPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
-    if (username === "admin" && password === "zish2025") {
+    
+    // Define users with their credentials and types
+    const users = {
+      admin: { password: "zish2025", type: "admin" as const },
+      superadmin: { password: "zishsuper2025", type: "superadmin" as const }
+    }
+    
+    // Check credentials
+    const user = users[username as keyof typeof users]
+    if (user && password === user.password) {
       setIsLoggedIn(true)
+      setUserType(user.type)
+      setCurrentUser(username)
       localStorage.setItem("adminLoggedIn", "true")
+      localStorage.setItem("userType", user.type)
+      localStorage.setItem("currentUser", username)
+      
       toast({
         title: "Login Successful",
-        description: "Welcome to the admin panel!",
+        description: `Welcome ${user.type === "superadmin" ? "Super Admin" : "Admin"}!`,
       })
     } else {
       toast({
@@ -167,12 +197,14 @@ export default function AdminPage() {
 
   const handleLogout = () => {
     setIsLoggedIn(false)
+    setUserType(null)
+    setCurrentUser("")
     localStorage.removeItem("adminLoggedIn")
-    setUsername("")
-    setPassword("")
+    localStorage.removeItem("userType")
+    localStorage.removeItem("currentUser")
     toast({
       title: "Logged Out",
-      description: "You have been logged out successfully.",
+      description: "You have been successfully logged out.",
     })
   }
 
@@ -348,28 +380,38 @@ export default function AdminPage() {
   const currentMonth = new Date().getMonth()
   const currentYear = new Date().getFullYear()
   
-  // Daily stats
+  // Daily stats - only count PAID orders for revenue
   const todayOrders = orders?.filter((order) => new Date(order.timestamp).toDateString() === today) || []
   const totalOrdersToday = todayOrders.length
-  const totalRevenueToday = todayOrders.reduce((sum, order) => sum + Number.parseFloat(order?.total || "0"), 0) || 0
   
-  // Monthly stats
+  // Filter only PAID orders for daily revenue
+  const todayPaidOrders = todayOrders.filter((order) => 
+    (order?.paymentStatus || "unpaid").toLowerCase() !== "unpaid"
+  )
+  const totalRevenueToday = todayPaidOrders.reduce((sum, order) => sum + Number.parseFloat(order?.total || "0"), 0) || 0
+  
+  // Monthly stats - only count PAID orders for revenue
   const monthlyOrders = orders?.filter((order) => {
     const orderDate = new Date(order.timestamp)
     return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear
   }) || []
-  const totalMonthlyRevenue = monthlyOrders.reduce((sum, order) => sum + Number.parseFloat(order?.total || "0"), 0) || 0
+  
+  // Filter only PAID orders for monthly revenue
+  const monthlyPaidOrders = monthlyOrders.filter((order) => 
+    (order?.paymentStatus || "unpaid").toLowerCase() !== "unpaid"
+  )
+  const totalMonthlyRevenue = monthlyPaidOrders.reduce((sum, order) => sum + Number.parseFloat(order?.total || "0"), 0) || 0
   
   // Status-based stats
   const pendingOrders = orders?.filter((order) => order?.status?.toLowerCase() === "pending")?.length || 0
   const completedOrders = orders?.filter((order) => order?.status?.toLowerCase() === "completed")?.length || 0
   const unpaidOrders = orders?.filter((order) => (order?.paymentStatus || "unpaid").toLowerCase() === "unpaid")?.length || 0
   
-  // Unpaid amount calculation
+  // Unpaid amount calculation (remains the same)
   const unpaidAmount = orders?.filter((order) => (order?.paymentStatus || "unpaid").toLowerCase() === "unpaid")
     .reduce((sum, order) => sum + Number.parseFloat(order?.total || "0"), 0) || 0
 
-  // Fast moving products calculation
+  // Fast moving products calculation (remains the same)
   const productCounts = {}
   orders?.forEach((order) => {
     if (order?.items && Array.isArray(order.items)) {
@@ -402,16 +444,34 @@ export default function AdminPage() {
       exportData.push([''])
       exportData.push(['DAILY STATS'])
       exportData.push(['Total Orders Today:', totalOrdersToday])
-      exportData.push(['Daily Revenue:', `₹${totalRevenueToday.toFixed(2)}`])
+      exportData.push(['Paid Orders Today:', todayPaidOrders.length])
+      exportData.push(['Daily Revenue (Paid Only):', `₹${totalRevenueToday.toFixed(2)}`])
       exportData.push([''])
       exportData.push(['MONTHLY STATS'])
-      exportData.push(['Monthly Revenue:', `₹${totalMonthlyRevenue.toFixed(2)}`])
+      exportData.push(['Total Monthly Orders:', monthlyOrders.length])
+      exportData.push(['Paid Monthly Orders:', monthlyPaidOrders.length])
+      exportData.push(['Monthly Revenue (Paid Only):', `₹${totalMonthlyRevenue.toFixed(2)}`])
       exportData.push([''])
       exportData.push(['ORDER STATUS'])
       exportData.push(['Pending Orders:', pendingOrders])
       exportData.push(['Completed Orders:', completedOrders])
       exportData.push(['Unpaid Orders:', unpaidOrders])
       exportData.push(['Unpaid Amount:', `₹${unpaidAmount.toFixed(2)}`])
+      exportData.push([''])
+      
+      // Add revenue breakdown
+      exportData.push(['=== REVENUE BREAKDOWN ==='])
+      exportData.push(['Payment Status', 'Order Count', 'Total Amount'])
+      
+      const paidOrders = orders?.filter((order) => (order?.paymentStatus || "unpaid").toLowerCase() !== "unpaid") || []
+      const unpaidOrdersList = orders?.filter((order) => (order?.paymentStatus || "unpaid").toLowerCase() === "unpaid") || []
+      
+      const paidAmount = paidOrders.reduce((sum, order) => sum + Number.parseFloat(order?.total || "0"), 0)
+      const unpaidAmountCalc = unpaidOrdersList.reduce((sum, order) => sum + Number.parseFloat(order?.total || "0"), 0)
+      
+      exportData.push(['Paid Orders', paidOrders.length, `₹${paidAmount.toFixed(2)}`])
+      exportData.push(['Unpaid Orders', unpaidOrdersList.length, `₹${unpaidAmountCalc.toFixed(2)}`])
+      exportData.push(['Total Orders', orders?.length || 0, `₹${(paidAmount + unpaidAmountCalc).toFixed(2)}`])
       exportData.push([''])
       
       // Add product sales data
@@ -516,6 +576,10 @@ export default function AdminPage() {
                   placeholder="Enter username"
                   required
                 />
+                <div className="mt-2 text-xs text-gray-500 space-y-1">
+                  <p>👤 Admin: <code>admin</code></p>
+                  <p>🦸‍♂️ Super Admin: <code>superadmin</code></p>
+                </div>
               </div>
               <div>
                 <Label htmlFor="password">Password</Label>
@@ -545,17 +609,31 @@ export default function AdminPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Cafe Admin Dashboard</h1>
-            <p className="text-gray-600 mt-2">Manage orders and track performance</p>
+            <div className="flex items-center gap-4 mt-2">
+              <p className="text-gray-600">Manage orders and track performance</p>
+              <div className="flex items-center gap-2">
+                <Badge 
+                  variant={userType === "superadmin" ? "default" : "secondary"}
+                  className={userType === "superadmin" ? "bg-purple-600 hover:bg-purple-700" : ""}
+                >
+                  {userType === "superadmin" ? "🦸‍♂️ Super Admin" : "👤 Admin"}
+                </Badge>
+                <span className="text-sm text-gray-500">({currentUser})</span>
+              </div>
+            </div>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-            <Button
-              onClick={exportToExcel}
-              className="bg-green-600 hover:bg-green-700 text-white flex items-center justify-center space-x-2 w-full sm:w-auto"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Export Data</span>
-              <span className="sm:hidden">Export</span>
-            </Button>
+            {/* Only show Export Data for Super Admin */}
+            {userType === "superadmin" && (
+              <Button
+                onClick={exportToExcel}
+                className="bg-green-600 hover:bg-green-700 text-white flex items-center justify-center space-x-2 w-full sm:w-auto"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export Data</span>
+                <span className="sm:hidden">Export</span>
+              </Button>
+            )}
             <Link href="/" className="w-full sm:w-auto">
               <Button variant="outline" className="flex items-center justify-center space-x-2 w-full">
                 <Home className="h-4 w-4" />
@@ -575,105 +653,175 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-gray-600 mb-1">Orders Today</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalOrdersToday}</p>
+        {/* Stats Cards - Only for Super Admin */}
+        {userType === "superadmin" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-600 mb-1">Orders Today</p>
+                    <p className="text-2xl font-bold text-gray-900">{totalOrdersToday}</p>
+                  </div>
+                  <ShoppingBag className="h-6 w-6 text-amber-600 flex-shrink-0" />
                 </div>
-                <ShoppingBag className="h-6 w-6 text-amber-600 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-gray-600 mb-1">Daily Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900">₹{totalRevenueToday.toFixed(2)}</p>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-600 mb-1">Daily Revenue</p>
+                    <p className="text-2xl font-bold text-gray-900">₹{totalRevenueToday.toFixed(2)}</p>
+                  </div>
+                  <DollarSign className="h-6 w-6 text-green-600 flex-shrink-0" />
                 </div>
-                <DollarSign className="h-6 w-6 text-green-600 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-gray-600 mb-1">Monthly Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900">₹{totalMonthlyRevenue.toFixed(2)}</p>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-600 mb-1">Monthly Revenue</p>
+                    <p className="text-2xl font-bold text-gray-900">₹{totalMonthlyRevenue.toFixed(2)}</p>
+                  </div>
+                  <DollarSign className="h-6 w-6 text-blue-600 flex-shrink-0" />
                 </div>
-                <DollarSign className="h-6 w-6 text-blue-600 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-gray-600 mb-1">Pending Orders</p>
-                  <p className="text-2xl font-bold text-gray-900">{pendingOrders}</p>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-600 mb-1">Pending Orders</p>
+                    <p className="text-2xl font-bold text-gray-900">{pendingOrders}</p>
+                  </div>
+                  <Clock className="h-6 w-6 text-yellow-600 flex-shrink-0" />
                 </div>
-                <Clock className="h-6 w-6 text-yellow-600 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-gray-600 mb-1">Unpaid Orders</p>
-                  <p className="text-2xl font-bold text-gray-900">{unpaidOrders}</p>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-600 mb-1">Unpaid Orders</p>
+                    <p className="text-2xl font-bold text-gray-900">{unpaidOrders}</p>
+                  </div>
+                  <XCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
                 </div>
-                <XCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-gray-600 mb-1">Unpaid Amount</p>
-                  <p className="text-2xl font-bold text-red-600">₹{unpaidAmount.toFixed(2)}</p>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-600 mb-1">Unpaid Amount</p>
+                    <p className="text-2xl font-bold text-red-600">₹{unpaidAmount.toFixed(2)}</p>
+                  </div>
+                  <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
                 </div>
-                <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-gray-600 mb-1">Fast Moving Items</p>
-                  <p className="text-2xl font-bold text-purple-600">{fastMovingProduct[1]}</p>
-                  <p className="text-xs text-gray-500 mt-1">Total Sold</p>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-600 mb-1">Fast Moving Items</p>
+                    <p className="text-2xl font-bold text-purple-600">{fastMovingProduct[1]}</p>
+                    <p className="text-xs text-gray-500 mt-1">Total Sold</p>
+                  </div>
+                  <TrendingUp className="h-6 w-6 text-purple-600 flex-shrink-0" />
                 </div>
-                <TrendingUp className="h-6 w-6 text-purple-600 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-gray-600 mb-1">Completed Orders</p>
-                  <p className="text-2xl font-bold text-gray-900">{completedOrders}</p>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-600 mb-1">Completed Orders</p>
+                    <p className="text-2xl font-bold text-gray-900">{completedOrders}</p>
+                  </div>
+                  <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
                 </div>
-                <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Super Admin Only Section */}
+        {userType === "superadmin" && (
+          <Card className="mb-8 border-purple-200 bg-purple-50">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-purple-700">
+                <AlertCircle className="h-5 w-5" />
+                <span>Super Admin Tools</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Button 
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  onClick={() => {
+                    localStorage.clear()
+                    toast({
+                      title: "Data Cleared",
+                      description: "All application data has been reset.",
+                    })
+                    window.location.reload()
+                  }}
+                >
+                  🗑️ Clear All Data
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="border-purple-300 text-purple-700 hover:bg-purple-100"
+                  onClick={() => {
+                    const backupData = {
+                      orders: JSON.parse(localStorage.getItem("cafeOrders") || "[]"),
+                      specials: JSON.parse(localStorage.getItem("todaysSpecials") || "[]"),
+                      feedback: JSON.parse(localStorage.getItem("cafeFeedback") || "[]"),
+                      timestamp: new Date().toISOString()
+                    }
+                    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `cafe-backup-${new Date().toISOString().split('T')[0]}.json`
+                    a.click()
+                    toast({
+                      title: "Backup Created",
+                      description: "Full system backup downloaded.",
+                    })
+                  }}
+                >
+                  💾 Backup Data
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="border-purple-300 text-purple-700 hover:bg-purple-100"
+                  onClick={() => {
+                    const stats = {
+                      totalOrders: orders.length,
+                      totalRevenue: orders.reduce((sum, order) => sum + parseFloat(order.total), 0),
+                      activeSpecials: todaysSpecials.length,
+                      systemHealth: "Operational"
+                    }
+                    alert(`System Stats:\n${JSON.stringify(stats, null, 2)}`)
+                  }}
+                >
+                  📊 System Stats
+                </Button>
               </div>
             </CardContent>
           </Card>
-        </div>
+        )}
 
         {/* Orders Section */}
         <Card className="mb-8">
