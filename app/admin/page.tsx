@@ -25,9 +25,24 @@ import {
   Home,
   TrendingUp,
   Download, // Add this
+  ShoppingCart,
+  Plus,
+  Calendar,
+  Package2,
+  Eye,
+  Truck,
+  Receipt,
+  Calculator,
+  Star, // Added for specials tab
+  BarChart3, // Add this
+  FileSpreadsheet, // Add this
+  FileText, // Add this
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
+import { InventoryManagement } from "@/components/inventory-management"
+import { StockPurchaseManagement } from "@/components/stock-purchase-management"
+import { StockInsightsDashboard } from "@/components/stock-insights-dashboard"
 
 interface Order {
   id: string
@@ -550,6 +565,8 @@ export default function AdminPage() {
     }
   }
 
+  const [activeTab, setActiveTab] = useState("dashboard") // Add this
+
   if (!isClient) {
     return <div>Loading...</div>
   }
@@ -653,459 +670,530 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Stats Cards - Only for Super Admin */}
-        {userType === "superadmin" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-600 mb-1">Orders Today</p>
-                    <p className="text-2xl font-bold text-gray-900">{totalOrdersToday}</p>
-                  </div>
-                  <ShoppingBag className="h-6 w-6 text-amber-600 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
+        {/* Navigation Tabs */}
+        {userType && (
+          <div className="mb-6">
+            <div className="flex flex-wrap gap-2 p-1 bg-white rounded-lg shadow-sm border">
+              <Button
+                variant={activeTab === "dashboard" ? "default" : "ghost"}
+                onClick={() => setActiveTab("dashboard")}
+                className="flex-1 sm:flex-none"
+              >
+                <Home className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+              
+              {userType === "superadmin" && (
+                <Button
+                  variant={activeTab === "inventory" ? "default" : "ghost"}
+                  onClick={() => setActiveTab("inventory")}
+                  className="flex-1 sm:flex-none"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Inventory
+                </Button>
+              )}
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-600 mb-1">Daily Revenue</p>
-                    <p className="text-2xl font-bold text-gray-900">₹{totalRevenueToday.toFixed(2)}</p>
-                  </div>
-                  <DollarSign className="h-6 w-6 text-green-600 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
+              <Button
+                variant={activeTab === "stock" ? "default" : "ghost"}
+                onClick={() => setActiveTab("stock")}
+                className="flex-1 sm:flex-none"
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Stock Management
+              </Button>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-600 mb-1">Monthly Revenue</p>
-                    <p className="text-2xl font-bold text-gray-900">₹{totalMonthlyRevenue.toFixed(2)}</p>
-                  </div>
-                  <DollarSign className="h-6 w-6 text-blue-600 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
+              {/* Only show Insights for Super Admin */}
+              {userType === "superadmin" && (
+                <Button
+                  variant={activeTab === "insights" ? "default" : "ghost"}
+                  onClick={() => setActiveTab("insights")}
+                  className="flex-1 sm:flex-none"
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Insights
+                </Button>
+              )}
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-600 mb-1">Pending Orders</p>
-                    <p className="text-2xl font-bold text-gray-900">{pendingOrders}</p>
-                  </div>
-                  <Clock className="h-6 w-6 text-yellow-600 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-600 mb-1">Unpaid Orders</p>
-                    <p className="text-2xl font-bold text-gray-900">{unpaidOrders}</p>
-                  </div>
-                  <XCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-600 mb-1">Unpaid Amount</p>
-                    <p className="text-2xl font-bold text-red-600">₹{unpaidAmount.toFixed(2)}</p>
-                  </div>
-                  <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-600 mb-1">Fast Moving Items</p>
-                    <p className="text-2xl font-bold text-purple-600">{fastMovingProduct[1]}</p>
-                    <p className="text-xs text-gray-500 mt-1">Total Sold</p>
-                  </div>
-                  <TrendingUp className="h-6 w-6 text-purple-600 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-600 mb-1">Completed Orders</p>
-                    <p className="text-2xl font-bold text-gray-900">{completedOrders}</p>
-                  </div>
-                  <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
+              {userType === "superadmin" && (
+                <Button
+                  variant={activeTab === "specials" ? "default" : "ghost"}
+                  onClick={() => setActiveTab("specials")}
+                  className="flex-1 sm:flex-none"
+                >
+                  <Star className="h-4 w-4 mr-2" />
+                  Today's Specials
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Super Admin Only Section */}
-        {userType === "superadmin" && (
-          <Card className="mb-8 border-purple-200 bg-purple-50">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-purple-700">
-                <AlertCircle className="h-5 w-5" />
-                <span>Super Admin Tools</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button 
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                  onClick={() => {
-                    localStorage.clear()
-                    toast({
-                      title: "Data Cleared",
-                      description: "All application data has been reset.",
-                    })
-                    window.location.reload()
-                  }}
-                >
-                  🗑️ Clear All Data
-                </Button>
-                <Button 
-                  variant="outline"
-                  className="border-purple-300 text-purple-700 hover:bg-purple-100"
-                  onClick={() => {
-                    const backupData = {
-                      orders: JSON.parse(localStorage.getItem("cafeOrders") || "[]"),
-                      specials: JSON.parse(localStorage.getItem("todaysSpecials") || "[]"),
-                      feedback: JSON.parse(localStorage.getItem("cafeFeedback") || "[]"),
-                      timestamp: new Date().toISOString()
-                    }
-                    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' })
-                    const url = URL.createObjectURL(blob)
-                    const a = document.createElement('a')
-                    a.href = url
-                    a.download = `cafe-backup-${new Date().toISOString().split('T')[0]}.json`
-                    a.click()
-                    toast({
-                      title: "Backup Created",
-                      description: "Full system backup downloaded.",
-                    })
-                  }}
-                >
-                  💾 Backup Data
-                </Button>
-                <Button 
-                  variant="outline"
-                  className="border-purple-300 text-purple-700 hover:bg-purple-100"
-                  onClick={() => {
-                    const stats = {
-                      totalOrders: orders.length,
-                      totalRevenue: orders.reduce((sum, order) => sum + parseFloat(order.total), 0),
-                      activeSpecials: todaysSpecials.length,
-                      systemHealth: "Operational"
-                    }
-                    alert(`System Stats:\n${JSON.stringify(stats, null, 2)}`)
-                  }}
-                >
-                  📊 System Stats
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Orders Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <ShoppingBag className="h-5 w-5" />
-              <span>Orders Management</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {orders?.length === 0 ? (
-              <div className="text-center py-8">
-                <ShoppingBag className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500">No orders found</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {orders?.map((order) => (
-                  <div key={order?.id} className="border rounded-lg p-4 bg-white shadow-sm">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
-                      <div className="flex items-center space-x-4">
-                        <div>
-                          <h3 className="font-semibold text-lg">Order #{order?.id?.slice(-6) || "N/A"}</h3>
-                          <p className="text-sm text-gray-600">{order?.customerName || "Unknown Customer"}</p>
-                          {order?.phoneNumber && <p className="text-sm text-gray-600">📞 {order.phoneNumber}</p>}
-                          <p className="text-sm text-gray-500">{order?.date || "No date"}</p>
-                        </div>
+        {/* Content based on active tab */}
+        {activeTab === "insights" && userType === "superadmin" ? (
+          <StockInsightsDashboard userType={userType} />
+        ) : activeTab === "inventory" && userType === "superadmin" ? (
+          <InventoryManagement userType={userType} />
+        ) : activeTab === "stock" ? (
+          <StockPurchaseManagement userType={userType} currentUser={currentUser} />
+        ) : (
+          <>
+            {/* Existing dashboard content - Stats Cards, Orders, etc. */}
+            {/* Stats Cards - Only for Super Admin */}
+            {userType === "superadmin" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-600 mb-1">Orders Today</p>
+                        <p className="text-2xl font-bold text-gray-900">{totalOrdersToday}</p>
                       </div>
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                        <Badge className={`${getStatusColor(order?.status || "")} border`}>
-                          {order?.status || "Unknown"}
-                        </Badge>
-                        <span className="text-lg font-bold text-amber-600">₹{order?.total || "0.00"}</span>
-                      </div>
+                      <ShoppingBag className="h-6 w-6 text-amber-600 flex-shrink-0" />
                     </div>
+                  </CardContent>
+                </Card>
 
-                    {/* Order Items */}
-                    <div className="mb-4">
-                      <h4 className="font-medium mb-2">Items:</h4>
-                      <div className="space-y-2">
-                        {order?.items?.map((item, index) => (
-                          <div key={index} className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-600 mb-1">Daily Revenue</p>
+                        <p className="text-2xl font-bold text-gray-900">₹{totalRevenueToday.toFixed(2)}</p>
+                      </div>
+                      <DollarSign className="h-6 w-6 text-green-600 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-600 mb-1">Monthly Revenue</p>
+                        <p className="text-2xl font-bold text-gray-900">₹{totalMonthlyRevenue.toFixed(2)}</p>
+                      </div>
+                      <DollarSign className="h-6 w-6 text-blue-600 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-600 mb-1">Pending Orders</p>
+                        <p className="text-2xl font-bold text-gray-900">{pendingOrders}</p>
+                      </div>
+                      <Clock className="h-6 w-6 text-yellow-600 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-600 mb-1">Unpaid Orders</p>
+                        <p className="text-2xl font-bold text-gray-900">{unpaidOrders}</p>
+                      </div>
+                      <XCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-600 mb-1">Unpaid Amount</p>
+                        <p className="text-2xl font-bold text-red-600">₹{unpaidAmount.toFixed(2)}</p>
+                      </div>
+                      <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-600 mb-1">Fast Moving Items</p>
+                        <p className="text-2xl font-bold text-purple-600">{fastMovingProduct[1]}</p>
+                        <p className="text-xs text-gray-500 mt-1">Total Sold</p>
+                      </div>
+                      <TrendingUp className="h-6 w-6 text-purple-600 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-600 mb-1">Completed Orders</p>
+                        <p className="text-2xl font-bold text-gray-900">{completedOrders}</p>
+                      </div>
+                      <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Super Admin Only Section */}
+            {userType === "superadmin" && (
+              <Card className="mb-8 border-purple-200 bg-purple-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2 text-purple-700">
+                    <AlertCircle className="h-5 w-5" />
+                    <span>Super Admin Tools</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Button 
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                      onClick={() => {
+                        localStorage.clear()
+                        toast({
+                          title: "Data Cleared",
+                          description: "All application data has been reset.",
+                        })
+                        window.location.reload()
+                      }}
+                    >
+                      🗑️ Clear All Data
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="border-purple-300 text-purple-700 hover:bg-purple-100"
+                      onClick={() => {
+                        const backupData = {
+                          orders: JSON.parse(localStorage.getItem("cafeOrders") || "[]"),
+                          specials: JSON.parse(localStorage.getItem("todaysSpecials") || "[]"),
+                          feedback: JSON.parse(localStorage.getItem("cafeFeedback") || "[]"),
+                          timestamp: new Date().toISOString()
+                        }
+                        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' })
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `cafe-backup-${new Date().toISOString().split('T')[0]}.json`
+                        a.click()
+                        toast({
+                          title: "Backup Created",
+                          description: "Full system backup downloaded.",
+                        })
+                      }}
+                    >
+                      💾 Backup Data
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="border-purple-300 text-purple-700 hover:bg-purple-100"
+                      onClick={() => {
+                        const stats = {
+                          totalOrders: orders.length,
+                          totalRevenue: orders.reduce((sum, order) => sum + parseFloat(order.total), 0),
+                          activeSpecials: todaysSpecials.length,
+                          systemHealth: "Operational"
+                        }
+                        alert(`System Stats:\n${JSON.stringify(stats, null, 2)}`)
+                      }}
+                    >
+                      📊 System Stats
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Orders Section */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <ShoppingBag className="h-5 w-5" />
+                  <span>Orders Management</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {orders?.length === 0 ? (
+                  <div className="text-center py-8">
+                    <ShoppingBag className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-500">No orders found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders?.map((order) => (
+                      <div key={order?.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+                          <div className="flex items-center space-x-4">
                             <div>
-                              <span className="font-medium">{item?.name || "Unknown Item"}</span>
-                              <span className="text-gray-600 ml-2">x{item?.quantity || 0}</span>
-                              {item?.specialInstructions && (
-                                <div className="text-xs text-blue-600 mt-1">Note: {item.specialInstructions}</div>
-                              )}
+                              <h3 className="font-semibold text-lg">Order #{order?.id?.slice(-6) || "N/A"}</h3>
+                              <p className="text-sm text-gray-600">{order?.customerName || "Unknown Customer"}</p>
+                              {order?.phoneNumber && <p className="text-sm text-gray-600">📞 {order.phoneNumber}</p>}
+                              <p className="text-sm text-gray-500">{order?.date || "No date"}</p>
                             </div>
-                            <span className="font-medium">₹{item?.subtotal || "0.00"}</span>
                           </div>
-                        )) || <p className="text-gray-500">No items</p>}
-                      </div>
-                    </div>
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                            <Badge className={`${getStatusColor(order?.status || "")} border`}>
+                              {order?.status || "Unknown"}
+                            </Badge>
+                            <span className="text-lg font-bold text-amber-600">₹{order?.total || "0.00"}</span>
+                          </div>
+                        </div>
 
-                    {/* Special Instructions */}
-                    {order?.generalInstructions && (
-                      <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <h4 className="font-medium text-blue-800 mb-1">Special Instructions:</h4>
-                        <p className="text-sm text-blue-700">{order.generalInstructions}</p>
-                      </div>
-                    )}
+                        {/* Order Items */}
+                        <div className="mb-4">
+                          <h4 className="font-medium mb-2">Items:</h4>
+                          <div className="space-y-2">
+                            {order?.items?.map((item, index) => (
+                              <div key={index} className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded">
+                                <div>
+                                  <span className="font-medium">{item?.name || "Unknown Item"}</span>
+                                  <span className="text-gray-600 ml-2">x{item?.quantity || 0}</span>
+                                  {item?.specialInstructions && (
+                                    <div className="text-xs text-blue-600 mt-1">Note: {item.specialInstructions}</div>
+                                  )}
+                                </div>
+                                <span className="font-medium">₹{item?.subtotal || "0.00"}</span>
+                              </div>
+                            )) || <p className="text-gray-500">No items</p>}
+                          </div>
+                        </div>
 
-                    {/* Status and Payment Controls */}
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      {/* Status Buttons */}
-                      <div className="flex-1">
-                        <Label className="text-sm font-medium mb-2 block">Order Status:</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {["Pending", "Preparing", "Ready", "Completed", "Cancelled"].map((status) => (
-                            <Button
-                              key={status}
-                              variant={order?.status?.toLowerCase() === status.toLowerCase() ? "default" : "outline"}
-                              size="sm"
-                              className={`flex items-center space-x-1 ${
-                                order?.status?.toLowerCase() === status.toLowerCase()
-                                  ? "bg-amber-600 hover:bg-amber-700 text-white"
-                                  : "hover:bg-amber-50"
-                              }`}
-                              onClick={() => updateOrderStatus(order?.id || "", status)}
-                            >
-                              {getStatusIcon(status)}
-                              <span>{status}</span>
-                            </Button>
-                          ))}
+                        {/* Special Instructions */}
+                        {order?.generalInstructions && (
+                          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <h4 className="font-medium text-blue-800 mb-1">Special Instructions:</h4>
+                            <p className="text-sm text-blue-700">{order.generalInstructions}</p>
+                          </div>
+                        )}
+
+                        {/* Status and Payment Controls */}
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          {/* Status Buttons */}
+                          <div className="flex-1">
+                            <Label className="text-sm font-medium mb-2 block">Order Status:</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {["Pending", "Preparing", "Ready", "Completed", "Cancelled"].map((status) => (
+                                <Button
+                                  key={status}
+                                  variant={order?.status?.toLowerCase() === status.toLowerCase() ? "default" : "outline"}
+                                  size="sm"
+                                  className={`flex items-center space-x-1 ${
+                                    order?.status?.toLowerCase() === status.toLowerCase()
+                                      ? "bg-amber-600 hover:bg-amber-700 text-white"
+                                      : "hover:bg-amber-50"
+                                  }`}
+                                  onClick={() => updateOrderStatus(order?.id || "", status)}
+                                >
+                                  {getStatusIcon(status)}
+                                  <span>{status}</span>
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Payment Status Buttons */}
+                          <div className="flex-1">
+                            <Label className="text-sm font-medium mb-2 block">Payment Status:</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { status: "unpaid", label: "Unpaid" },
+                                { status: "paid cash", label: "Paid Cash" },
+                                { status: "paid upi", label: "Paid UPI" }
+                              ].map(({ status, label }) => (
+                                <Button
+                                  key={status}
+                                  variant={order?.paymentStatus?.toLowerCase() === status.toLowerCase() ? "default" : "outline"}
+                                  size="sm"
+                                  className={`flex items-center space-x-1 ${
+                                    order?.paymentStatus?.toLowerCase() === status.toLowerCase()
+                                      ? (() => {
+                                          switch (status.toLowerCase()) {
+                                            case "unpaid":
+                                              return "bg-red-600 hover:bg-red-700 text-white"
+                                            case "paid cash":
+                                              return "bg-green-600 hover:bg-green-700 text-white"
+                                            case "paid upi":
+                                              return "bg-blue-600 hover:bg-blue-700 text-white"
+                                            default:
+                                              return "bg-gray-600 hover:bg-gray-700 text-white"
+                                          }
+                                        })()
+                                      : (() => {
+                                          switch (status.toLowerCase()) {
+                                            case "unpaid":
+                                              return "hover:bg-red-50 border-red-200"
+                                            case "paid cash":
+                                              return "hover:bg-green-50 border-green-200"
+                                            case "paid upi":
+                                              return "hover:bg-blue-50 border-blue-200"
+                                            default:
+                                              return "hover:bg-gray-50 border-gray-200"
+                                          }
+                                        })()
+                                  }`}
+                                  onClick={() => updatePaymentStatus(order?.id || "", status)}
+                                >
+                                  {getPaymentStatusIcon(status)}
+                                  <span>{label}</span>
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       </div>
-
-                      {/* Payment Status Buttons */}
-                      <div className="flex-1">
-                        <Label className="text-sm font-medium mb-2 block">Payment Status:</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {[
-                            { status: "unpaid", label: "Unpaid" },
-                            { status: "paid cash", label: "Paid Cash" },
-                            { status: "paid upi", label: "Paid UPI" }
-                          ].map(({ status, label }) => (
-                            <Button
-                              key={status}
-                              variant={order?.paymentStatus?.toLowerCase() === status.toLowerCase() ? "default" : "outline"}
-                              size="sm"
-                              className={`flex items-center space-x-1 ${
-                                order?.paymentStatus?.toLowerCase() === status.toLowerCase()
-                                  ? (() => {
-                                      switch (status.toLowerCase()) {
-                                        case "unpaid":
-                                          return "bg-red-600 hover:bg-red-700 text-white"
-                                        case "paid cash":
-                                          return "bg-green-600 hover:bg-green-700 text-white"
-                                        case "paid upi":
-                                          return "bg-blue-600 hover:bg-blue-700 text-white"
-                                        default:
-                                          return "bg-gray-600 hover:bg-gray-700 text-white"
-                                      }
-                                    })()
-                                  : (() => {
-                                      switch (status.toLowerCase()) {
-                                        case "unpaid":
-                                          return "hover:bg-red-50 border-red-200"
-                                        case "paid cash":
-                                          return "hover:bg-green-50 border-green-200"
-                                        case "paid upi":
-                                          return "hover:bg-blue-50 border-blue-200"
-                                        default:
-                                          return "hover:bg-gray-50 border-gray-200"
-                                      }
-                                    })()
-                              }`}
-                              onClick={() => updatePaymentStatus(order?.id || "", status)}
-                            >
-                              {getPaymentStatusIcon(status)}
-                              <span>{label}</span>
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+                    )) || <p className="text-gray-500">No orders to display</p>}
                   </div>
-                )) || <p className="text-gray-500">No orders to display</p>}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Today's Specials Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle className="flex items-center space-x-2">
-                <Coffee className="h-5 w-5" />
-                <span>Today's Specials</span>
-              </CardTitle>
-              <Button onClick={() => setShowAddSpecial(true)} className="bg-amber-600 hover:bg-amber-700">
-                Add Special
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {todaysSpecials?.length === 0 ? (
-              <div className="text-center py-8">
-                <Coffee className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500">No specials added for today</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {todaysSpecials?.map((special) => (
-                  <div key={special?.id} className="border rounded-lg p-4 bg-white shadow-sm">
-                    <img
-                      src={special?.image || "/placeholder.svg"}
-                      alt={special?.name || "Special"}
-                      className="w-full h-32 object-cover rounded-lg mb-3"
+            {/* Today's Specials Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center space-x-2">
+                    <Coffee className="h-5 w-5" />
+                    <span>Today's Specials</span>
+                  </CardTitle>
+                  <Button onClick={() => setShowAddSpecial(true)} className="bg-amber-600 hover:bg-amber-700">
+                    Add Special
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {todaysSpecials?.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Coffee className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-500">No specials added for today</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {todaysSpecials?.map((special) => (
+                      <div key={special?.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                        <img
+                          src={special?.image || "/placeholder.svg"}
+                          alt={special?.name || "Special"}
+                          className="w-full h-32 object-cover rounded-lg mb-3"
+                        />
+                        <h3 className="font-semibold text-lg mb-1">{special?.name || "Unknown Special"}</h3>
+                        <p className="text-sm text-gray-600 mb-2">{special?.description || "No description"}</p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-bold text-amber-600">₹{special?.price || 0}</span>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline">{special?.category || "Unknown"}</Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeSpecial(special?.id || 0)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )) || <p className="text-gray-500">No specials to display</p>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Add Special Modal */}
+            <Dialog open={showAddSpecial} onOpenChange={setShowAddSpecial}>
+              <DialogContent aria-describedby="add-special-description">
+                <DialogHeader>
+                  <DialogTitle>Add Today's Special</DialogTitle>
+                </DialogHeader>
+                <div id="add-special-description" className="sr-only">
+                  Add a new special item to today's menu by selecting an existing item or creating a new one.
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="existingItem">Select Existing Item (Optional)</Label>
+                    <Select
+                      value={selectedExistingItem || "create-new"}
+                      onValueChange={handleExistingItemSelect}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose from existing menu items" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="create-new">Create New Item</SelectItem>
+                        {existingMenuItems.map((item) => (
+                          <SelectItem key={item.id} value={item.id.toString()}>
+                            {item.name} - ₹{item.price} ({item.category})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="specialName">Name</Label>
+                    <Input
+                      id="specialName"
+                      value={newSpecial.name}
+                      onChange={(e) => setNewSpecial({ ...newSpecial, name: e.target.value })}
+                      placeholder="Special item name"
                     />
-                    <h3 className="font-semibold text-lg mb-1">{special?.name || "Unknown Special"}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{special?.description || "No description"}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold text-amber-600">₹{special?.price || 0}</span>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline">{special?.category || "Unknown"}</Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeSpecial(special?.id || 0)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
                   </div>
-                )) || <p className="text-gray-500">No specials to display</p>}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Add Special Modal */}
-        <Dialog open={showAddSpecial} onOpenChange={setShowAddSpecial}>
-          <DialogContent aria-describedby="add-special-description">
-            <DialogHeader>
-              <DialogTitle>Add Today's Special</DialogTitle>
-            </DialogHeader>
-            <div id="add-special-description" className="sr-only">
-              Add a new special item to today's menu by selecting an existing item or creating a new one.
-            </div>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="existingItem">Select Existing Item (Optional)</Label>
-                <Select
-                  value={selectedExistingItem || "create-new"}
-                  onValueChange={handleExistingItemSelect}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose from existing menu items" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="create-new">Create New Item</SelectItem>
-                    {existingMenuItems.map((item) => (
-                      <SelectItem key={item.id} value={item.id.toString()}>
-                        {item.name} - ₹{item.price} ({item.category})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="specialName">Name</Label>
-                <Input
-                  id="specialName"
-                  value={newSpecial.name}
-                  onChange={(e) => setNewSpecial({ ...newSpecial, name: e.target.value })}
-                  placeholder="Special item name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="specialPrice">Price</Label>
-                <Input
-                  id="specialPrice"
-                  type="number"
-                  value={newSpecial.price}
-                  onChange={(e) => setNewSpecial({ ...newSpecial, price: e.target.value })}
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <Label htmlFor="specialCategory">Category</Label>
-                <Select
-                  value={newSpecial.category}
-                  onValueChange={(value) => setNewSpecial({ ...newSpecial, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Tea">Tea</SelectItem>
-                    <SelectItem value="Coffee">Coffee</SelectItem>
-                    <SelectItem value="Juice">Juice</SelectItem>
-                    <SelectItem value="Shakes">Shakes</SelectItem>
-                    <SelectItem value="Ice Cream">Ice Cream</SelectItem>
-                    <SelectItem value="Food">Food</SelectItem>
-                    <SelectItem value="Snacks">Snacks</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="specialDescription">Description</Label>
-                <Textarea
-                  id="specialDescription"
-                  value={newSpecial.description}
-                  onChange={(e) => setNewSpecial({ ...newSpecial, description: e.target.value })}
-                  placeholder="Describe the special item"
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowAddSpecial(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={addTodaysSpecial} className="bg-amber-600 hover:bg-amber-700">
-                  Add Special
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+                  <div>
+                    <Label htmlFor="specialPrice">Price</Label>
+                    <Input
+                      id="specialPrice"
+                      type="number"
+                      value={newSpecial.price}
+                      onChange={(e) => setNewSpecial({ ...newSpecial, price: e.target.value })}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="specialCategory">Category</Label>
+                    <Select
+                      value={newSpecial.category}
+                      onValueChange={(value) => setNewSpecial({ ...newSpecial, category: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Tea">Tea</SelectItem>
+                        <SelectItem value="Coffee">Coffee</SelectItem>
+                        <SelectItem value="Juice">Juice</SelectItem>
+                        <SelectItem value="Shakes">Shakes</SelectItem>
+                        <SelectItem value="Ice Cream">Ice Cream</SelectItem>
+                        <SelectItem value="Food">Food</SelectItem>
+                        <SelectItem value="Snacks">Snacks</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="specialDescription">Description</Label>
+                    <Textarea
+                      id="specialDescription"
+                      value={newSpecial.description}
+                      onChange={(e) => setNewSpecial({ ...newSpecial, description: e.target.value })}
+                      placeholder="Describe the special item"
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => setShowAddSpecial(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={addTodaysSpecial} className="bg-amber-600 hover:bg-amber-700">
+                      Add Special
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
       </div>
     </div>
   )
