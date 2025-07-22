@@ -1,0 +1,964 @@
+"use client"
+
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Coffee,
+  DollarSign,
+  ShoppingBag,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  ChefHat,
+  Package,
+  LogOut,
+  Home,
+  TrendingUp,
+  Download, // Add this
+} from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
+
+interface Order {
+  id: string
+  items: Array<{
+    name: string
+    price: number
+    quantity: number
+    specialInstructions?: string
+    subtotal: string
+  }>
+  total: string
+  customerName: string
+  phoneNumber?: string
+  generalInstructions?: string
+  status: string
+  paymentStatus: string
+  date: string
+  timestamp: string
+}
+
+interface Special {
+  id: number
+  name: string
+  price: number
+  category: string
+  description: string
+  image?: string
+}
+
+export default function AdminPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [orders, setOrders] = useState<Order[]>([])
+  const [todaysSpecials, setTodaysSpecials] = useState<Special[]>([])
+  const [newSpecial, setNewSpecial] = useState({
+    name: "",
+    price: "",
+    category: "",
+    description: "",
+  })
+  const [showAddSpecial, setShowAddSpecial] = useState(false)
+  const { toast } = useToast()
+
+  const [existingMenuItems] = useState([
+    {
+      id: 1,
+      name: "Masala Tea",
+      price: 25,
+      category: "Tea",
+      description: "Traditional spiced tea with aromatic herbs",
+    },
+    { id: 2, name: "Filter Coffee", price: 30, category: "Coffee", description: "South Indian style filter coffee" },
+    {
+      id: 3,
+      name: "Cappuccino",
+      price: 45,
+      category: "Coffee",
+      description: "Classic Italian coffee with steamed milk foam",
+    },
+    { id: 4, name: "Fresh Lime Juice", price: 35, category: "Juice", description: "Refreshing lime juice with mint" },
+    { id: 5, name: "Mango Shake", price: 55, category: "Shakes", description: "Creamy mango milkshake" },
+    { id: 6, name: "Vanilla Ice Cream", price: 40, category: "Ice Cream", description: "Premium vanilla ice cream" },
+    { id: 7, name: "Samosa", price: 20, category: "Snacks", description: "Crispy fried pastry with spiced filling" },
+    { id: 8, name: "Sandwich", price: 60, category: "Food", description: "Grilled vegetable sandwich" },
+    { id: 9, name: "Dosa", price: 80, category: "Food", description: "South Indian crepe with chutney and sambar" },
+    {
+      id: 10,
+      name: "Vada Pav",
+      price: 25,
+      category: "Snacks",
+      description: "Mumbai street food - spiced potato fritter in bun",
+    },
+  ])
+  const [selectedExistingItem, setSelectedExistingItem] = useState("")
+
+  // Add hydration safety
+  const [isClient, setIsClient] = useState(false)
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const savedLogin = localStorage.getItem("adminLoggedIn")
+    if (savedLogin === "true") {
+      setIsLoggedIn(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  // Load orders and specials
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadOrders()
+      loadTodaysSpecials()
+    }
+  }, [isLoggedIn])
+
+  const loadOrders = () => {
+    try {
+      const savedOrders = JSON.parse(localStorage.getItem("cafeOrders") || "[]")
+      setOrders(savedOrders || [])
+    } catch (error) {
+      console.error("Error loading orders:", error)
+      setOrders([])
+    }
+  }
+
+  const loadTodaysSpecials = () => {
+    try {
+      const savedSpecials = JSON.parse(localStorage.getItem("todaysSpecials") || "[]")
+      setTodaysSpecials(savedSpecials || [])
+    } catch (error) {
+      console.error("Error loading specials:", error)
+      setTodaysSpecials([])
+    }
+  }
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (username === "admin" && password === "zish2025") {
+      setIsLoggedIn(true)
+      localStorage.setItem("adminLoggedIn", "true")
+      toast({
+        title: "Login Successful",
+        description: "Welcome to the admin panel!",
+      })
+    } else {
+      toast({
+        title: "Login Failed",
+        description: "Invalid username or password.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleLogout = () => {
+    setIsLoggedIn(false)
+    localStorage.removeItem("adminLoggedIn")
+    setUsername("")
+    setPassword("")
+    toast({
+      title: "Logged Out",
+      description: "You have been logged out successfully.",
+    })
+  }
+
+  const updateOrderStatus = (orderId: string, newStatus: string) => {
+    try {
+      const updatedOrders = orders.map((order) => (order.id === orderId ? { ...order, status: newStatus } : order))
+      setOrders(updatedOrders)
+      localStorage.setItem("cafeOrders", JSON.stringify(updatedOrders))
+      toast({
+        title: "Status Updated",
+        description: `Order #${orderId.slice(-6)} status changed to ${newStatus}`,
+      })
+    } catch (error) {
+      console.error("Error updating order status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update order status.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const updatePaymentStatus = (orderId: string, newPaymentStatus: string) => {
+    try {
+      const updatedOrders = orders.map((order) =>
+        order.id === orderId ? { ...order, paymentStatus: newPaymentStatus } : order,
+      )
+      setOrders(updatedOrders)
+      localStorage.setItem("cafeOrders", JSON.stringify(updatedOrders))
+      toast({
+        title: "Payment Status Updated",
+        description: `Order #${orderId.slice(-6)} payment status changed to ${newPaymentStatus}`,
+      })
+    } catch (error) {
+      console.error("Error updating payment status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update payment status.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleExistingItemSelect = (itemId: string) => {
+    if (itemId === "create-new") {
+      setNewSpecial({ name: "", price: "", category: "", description: "" })
+      setSelectedExistingItem("")
+      return
+    }
+
+    const item = existingMenuItems.find((item) => item.id.toString() === itemId)
+    if (item) {
+      setNewSpecial({
+        name: item.name,
+        price: item.price.toString(),
+        category: item.category,
+        description: item.description,
+      })
+      setSelectedExistingItem(itemId)
+    }
+  }
+
+  const addTodaysSpecial = () => {
+    if (!newSpecial.name) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide at least a name for the special.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const special: Special = {
+        id: Date.now(),
+        name: newSpecial.name,
+        price: newSpecial.price ? Number.parseFloat(newSpecial.price) : 0,
+        category: newSpecial.category || "Other",
+        description: newSpecial.description,
+        image: `/placeholder.svg?height=200&width=200&text=${encodeURIComponent(newSpecial.name)}`,
+      }
+
+      const updatedSpecials = [...todaysSpecials, special]
+      setTodaysSpecials(updatedSpecials)
+      localStorage.setItem("todaysSpecials", JSON.stringify(updatedSpecials))
+
+      setNewSpecial({ name: "", price: "", category: "", description: "" })
+      setSelectedExistingItem("")
+      setShowAddSpecial(false)
+
+      toast({
+        title: "Special Added",
+        description: `${special.name} has been added to today's specials!`,
+      })
+    } catch (error) {
+      console.error("Error adding special:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add special.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const removeSpecial = (specialId: number) => {
+    try {
+      const updatedSpecials = todaysSpecials.filter((special) => special.id !== specialId)
+      setTodaysSpecials(updatedSpecials)
+      localStorage.setItem("todaysSpecials", JSON.stringify(updatedSpecials))
+      toast({
+        title: "Special Removed",
+        description: "Special has been removed from today's menu.",
+      })
+    } catch (error) {
+      console.error("Error removing special:", error)
+      toast({
+        title: "Error",
+        description: "Failed to remove special.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "pending":
+        return <Clock className="h-4 w-4" />
+      case "preparing":
+        return <ChefHat className="h-4 w-4" />
+      case "ready":
+        return <Package className="h-4 w-4" />
+      case "completed":
+        return <CheckCircle className="h-4 w-4" />
+      case "cancelled":
+        return <XCircle className="h-4 w-4" />
+      default:
+        return <AlertCircle className="h-4 w-4" />
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      case "preparing":
+        return "bg-blue-100 text-blue-800 border-blue-200"
+      case "ready":
+        return "bg-green-100 text-green-800 border-green-200"
+      case "completed":
+        return "bg-gray-100 text-gray-800 border-gray-200"
+      case "cancelled":
+        return "bg-red-100 text-red-800 border-red-200"
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
+
+  const getPaymentStatusIcon = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "unpaid":
+        return <XCircle className="h-4 w-4" />
+      case "paid cash":
+        return <DollarSign className="h-4 w-4" />
+      case "paid upi":
+        return <Coffee className="h-4 w-4" />
+      default:
+        return <AlertCircle className="h-4 w-4" />
+    }
+  }
+
+  // Calculate stats
+  const today = new Date().toDateString()
+  const currentMonth = new Date().getMonth()
+  const currentYear = new Date().getFullYear()
+  
+  // Daily stats
+  const todayOrders = orders?.filter((order) => new Date(order.timestamp).toDateString() === today) || []
+  const totalOrdersToday = todayOrders.length
+  const totalRevenueToday = todayOrders.reduce((sum, order) => sum + Number.parseFloat(order?.total || "0"), 0) || 0
+  
+  // Monthly stats
+  const monthlyOrders = orders?.filter((order) => {
+    const orderDate = new Date(order.timestamp)
+    return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear
+  }) || []
+  const totalMonthlyRevenue = monthlyOrders.reduce((sum, order) => sum + Number.parseFloat(order?.total || "0"), 0) || 0
+  
+  // Status-based stats
+  const pendingOrders = orders?.filter((order) => order?.status?.toLowerCase() === "pending")?.length || 0
+  const completedOrders = orders?.filter((order) => order?.status?.toLowerCase() === "completed")?.length || 0
+  const unpaidOrders = orders?.filter((order) => (order?.paymentStatus || "unpaid").toLowerCase() === "unpaid")?.length || 0
+  
+  // Unpaid amount calculation
+  const unpaidAmount = orders?.filter((order) => (order?.paymentStatus || "unpaid").toLowerCase() === "unpaid")
+    .reduce((sum, order) => sum + Number.parseFloat(order?.total || "0"), 0) || 0
+
+  // Fast moving products calculation
+  const productCounts = {}
+  orders?.forEach((order) => {
+    if (order?.items && Array.isArray(order.items)) {
+      order.items.forEach((item) => {
+        const productName = item?.name || "Unknown Item"
+        const quantity = item?.quantity || 0
+        productCounts[productName] = (productCounts[productName] || 0) + quantity
+      })
+    } else if (order?.item) {
+      // Handle legacy single item format
+      const productName = order.item
+      const quantity = order?.quantity || 1
+      productCounts[productName] = (productCounts[productName] || 0) + quantity
+    }
+  })
+
+  // Find the most popular product
+  const fastMovingProduct = Object.entries(productCounts).length > 0 
+    ? Object.entries(productCounts).reduce((a, b) => a[1] > b[1] ? a : b)
+    : ["No orders yet", 0]
+
+  const exportToExcel = () => {
+    try {
+      // Create comprehensive data for export
+      const exportData = []
+      
+      // Add summary statistics
+      exportData.push(['=== CAFE STATISTICS REPORT ==='])
+      exportData.push(['Generated on:', new Date().toLocaleString()])
+      exportData.push([''])
+      exportData.push(['DAILY STATS'])
+      exportData.push(['Total Orders Today:', totalOrdersToday])
+      exportData.push(['Daily Revenue:', `₹${totalRevenueToday.toFixed(2)}`])
+      exportData.push([''])
+      exportData.push(['MONTHLY STATS'])
+      exportData.push(['Monthly Revenue:', `₹${totalMonthlyRevenue.toFixed(2)}`])
+      exportData.push([''])
+      exportData.push(['ORDER STATUS'])
+      exportData.push(['Pending Orders:', pendingOrders])
+      exportData.push(['Completed Orders:', completedOrders])
+      exportData.push(['Unpaid Orders:', unpaidOrders])
+      exportData.push(['Unpaid Amount:', `₹${unpaidAmount.toFixed(2)}`])
+      exportData.push([''])
+      
+      // Add product sales data
+      exportData.push(['=== PRODUCT SALES REPORT ==='])
+      exportData.push(['Product Name', 'Total Quantity Sold', 'Revenue Impact'])
+      
+      // Sort products by quantity sold (descending)
+      const sortedProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1])
+      
+      sortedProducts.forEach(([productName, quantity]) => {
+        // Calculate revenue impact for each product
+        let productRevenue = 0
+        orders?.forEach((order) => {
+          if (order?.items && Array.isArray(order.items)) {
+            order.items.forEach((item) => {
+              if (item?.name === productName) {
+                productRevenue += (item?.price || 0) * (item?.quantity || 0)
+              }
+            })
+          }
+        })
+        
+        exportData.push([productName, quantity, `₹${productRevenue.toFixed(2)}`])
+      })
+      
+      exportData.push([''])
+      
+      // Add detailed orders data
+      exportData.push(['=== DETAILED ORDERS DATA ==='])
+      exportData.push(['Order ID', 'Customer Name', 'Phone', 'Date', 'Status', 'Payment Status', 'Items', 'Total Amount'])
+      
+      orders?.forEach((order) => {
+        const itemsText = order?.items && Array.isArray(order.items) 
+          ? order.items.map(item => `${item.quantity}x ${item.name}`).join('; ')
+          : `${order?.quantity || 1}x ${order?.item || 'Unknown'}`
+        
+        exportData.push([
+          order?.id?.slice(-6) || 'Unknown',
+          order?.customerName || 'N/A',
+          order?.phoneNumber || 'N/A',
+          new Date(order?.timestamp).toLocaleString(),
+          order?.status || 'Unknown',
+          order?.paymentStatus || 'unpaid',
+          itemsText,
+          `₹${order?.total || '0'}`
+        ])
+      })
+      
+      // Convert to CSV format
+      const csvContent = exportData.map(row => 
+        row.map(field => `"${field}"`).join(',')
+      ).join('\n')
+      
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `cafe-report-${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      toast({
+        title: "Export Successful",
+        description: "Cafe data has been downloaded as CSV file.",
+      })
+    } catch (error) {
+      console.error("Export error:", error)
+      toast({
+        title: "Export Failed",
+        description: "There was an error exporting the data.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (!isClient) {
+    return <div>Loading...</div>
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex items-center justify-center space-x-2 mb-4">
+              <Coffee className="h-8 w-8 text-amber-600" />
+              <CardTitle className="text-2xl font-bold text-amber-600">Admin Login</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter username"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700">
+                Login
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 p-4">
+      <div className="container mx-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Cafe Admin Dashboard</h1>
+            <p className="text-gray-600 mt-2">Manage orders and track performance</p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <Button
+              onClick={exportToExcel}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center justify-center space-x-2 w-full sm:w-auto"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Export Data</span>
+              <span className="sm:hidden">Export</span>
+            </Button>
+            <Link href="/" className="w-full sm:w-auto">
+              <Button variant="outline" className="flex items-center justify-center space-x-2 w-full">
+                <Home className="h-4 w-4" />
+                <span className="hidden sm:inline">Visit Website</span>
+                <span className="sm:hidden">Website</span>
+              </Button>
+            </Link>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="flex items-center justify-center space-x-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 w-full sm:w-auto"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Logout</span>
+              <span className="sm:hidden">Exit</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-gray-600 mb-1">Orders Today</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalOrdersToday}</p>
+                </div>
+                <ShoppingBag className="h-6 w-6 text-amber-600 flex-shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-gray-600 mb-1">Daily Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{totalRevenueToday.toFixed(2)}</p>
+                </div>
+                <DollarSign className="h-6 w-6 text-green-600 flex-shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-gray-600 mb-1">Monthly Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{totalMonthlyRevenue.toFixed(2)}</p>
+                </div>
+                <DollarSign className="h-6 w-6 text-blue-600 flex-shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-gray-600 mb-1">Pending Orders</p>
+                  <p className="text-2xl font-bold text-gray-900">{pendingOrders}</p>
+                </div>
+                <Clock className="h-6 w-6 text-yellow-600 flex-shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-gray-600 mb-1">Unpaid Orders</p>
+                  <p className="text-2xl font-bold text-gray-900">{unpaidOrders}</p>
+                </div>
+                <XCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-gray-600 mb-1">Unpaid Amount</p>
+                  <p className="text-2xl font-bold text-red-600">₹{unpaidAmount.toFixed(2)}</p>
+                </div>
+                <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-gray-600 mb-1">Fast Moving Items</p>
+                  <p className="text-2xl font-bold text-purple-600">{fastMovingProduct[1]}</p>
+                  <p className="text-xs text-gray-500 mt-1">Total Sold</p>
+                </div>
+                <TrendingUp className="h-6 w-6 text-purple-600 flex-shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-gray-600 mb-1">Completed Orders</p>
+                  <p className="text-2xl font-bold text-gray-900">{completedOrders}</p>
+                </div>
+                <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Orders Section */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <ShoppingBag className="h-5 w-5" />
+              <span>Orders Management</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {orders?.length === 0 ? (
+              <div className="text-center py-8">
+                <ShoppingBag className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500">No orders found</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {orders?.map((order) => (
+                  <div key={order?.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+                      <div className="flex items-center space-x-4">
+                        <div>
+                          <h3 className="font-semibold text-lg">Order #{order?.id?.slice(-6) || "N/A"}</h3>
+                          <p className="text-sm text-gray-600">{order?.customerName || "Unknown Customer"}</p>
+                          {order?.phoneNumber && <p className="text-sm text-gray-600">📞 {order.phoneNumber}</p>}
+                          <p className="text-sm text-gray-500">{order?.date || "No date"}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                        <Badge className={`${getStatusColor(order?.status || "")} border`}>
+                          {order?.status || "Unknown"}
+                        </Badge>
+                        <span className="text-lg font-bold text-amber-600">₹{order?.total || "0.00"}</span>
+                      </div>
+                    </div>
+
+                    {/* Order Items */}
+                    <div className="mb-4">
+                      <h4 className="font-medium mb-2">Items:</h4>
+                      <div className="space-y-2">
+                        {order?.items?.map((item, index) => (
+                          <div key={index} className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded">
+                            <div>
+                              <span className="font-medium">{item?.name || "Unknown Item"}</span>
+                              <span className="text-gray-600 ml-2">x{item?.quantity || 0}</span>
+                              {item?.specialInstructions && (
+                                <div className="text-xs text-blue-600 mt-1">Note: {item.specialInstructions}</div>
+                              )}
+                            </div>
+                            <span className="font-medium">₹{item?.subtotal || "0.00"}</span>
+                          </div>
+                        )) || <p className="text-gray-500">No items</p>}
+                      </div>
+                    </div>
+
+                    {/* Special Instructions */}
+                    {order?.generalInstructions && (
+                      <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <h4 className="font-medium text-blue-800 mb-1">Special Instructions:</h4>
+                        <p className="text-sm text-blue-700">{order.generalInstructions}</p>
+                      </div>
+                    )}
+
+                    {/* Status and Payment Controls */}
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      {/* Status Buttons */}
+                      <div className="flex-1">
+                        <Label className="text-sm font-medium mb-2 block">Order Status:</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {["Pending", "Preparing", "Ready", "Completed", "Cancelled"].map((status) => (
+                            <Button
+                              key={status}
+                              variant={order?.status?.toLowerCase() === status.toLowerCase() ? "default" : "outline"}
+                              size="sm"
+                              className={`flex items-center space-x-1 ${
+                                order?.status?.toLowerCase() === status.toLowerCase()
+                                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                                  : "hover:bg-amber-50"
+                              }`}
+                              onClick={() => updateOrderStatus(order?.id || "", status)}
+                            >
+                              {getStatusIcon(status)}
+                              <span>{status}</span>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Payment Status Buttons */}
+                      <div className="flex-1">
+                        <Label className="text-sm font-medium mb-2 block">Payment Status:</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { status: "unpaid", label: "Unpaid" },
+                            { status: "paid cash", label: "Paid Cash" },
+                            { status: "paid upi", label: "Paid UPI" }
+                          ].map(({ status, label }) => (
+                            <Button
+                              key={status}
+                              variant={order?.paymentStatus?.toLowerCase() === status.toLowerCase() ? "default" : "outline"}
+                              size="sm"
+                              className={`flex items-center space-x-1 ${
+                                order?.paymentStatus?.toLowerCase() === status.toLowerCase()
+                                  ? (() => {
+                                      switch (status.toLowerCase()) {
+                                        case "unpaid":
+                                          return "bg-red-600 hover:bg-red-700 text-white"
+                                        case "paid cash":
+                                          return "bg-green-600 hover:bg-green-700 text-white"
+                                        case "paid upi":
+                                          return "bg-blue-600 hover:bg-blue-700 text-white"
+                                        default:
+                                          return "bg-gray-600 hover:bg-gray-700 text-white"
+                                      }
+                                    })()
+                                  : (() => {
+                                      switch (status.toLowerCase()) {
+                                        case "unpaid":
+                                          return "hover:bg-red-50 border-red-200"
+                                        case "paid cash":
+                                          return "hover:bg-green-50 border-green-200"
+                                        case "paid upi":
+                                          return "hover:bg-blue-50 border-blue-200"
+                                        default:
+                                          return "hover:bg-gray-50 border-gray-200"
+                                      }
+                                    })()
+                              }`}
+                              onClick={() => updatePaymentStatus(order?.id || "", status)}
+                            >
+                              {getPaymentStatusIcon(status)}
+                              <span>{label}</span>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )) || <p className="text-gray-500">No orders to display</p>}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Today's Specials Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center space-x-2">
+                <Coffee className="h-5 w-5" />
+                <span>Today's Specials</span>
+              </CardTitle>
+              <Button onClick={() => setShowAddSpecial(true)} className="bg-amber-600 hover:bg-amber-700">
+                Add Special
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {todaysSpecials?.length === 0 ? (
+              <div className="text-center py-8">
+                <Coffee className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500">No specials added for today</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {todaysSpecials?.map((special) => (
+                  <div key={special?.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                    <img
+                      src={special?.image || "/placeholder.svg"}
+                      alt={special?.name || "Special"}
+                      className="w-full h-32 object-cover rounded-lg mb-3"
+                    />
+                    <h3 className="font-semibold text-lg mb-1">{special?.name || "Unknown Special"}</h3>
+                    <p className="text-sm text-gray-600 mb-2">{special?.description || "No description"}</p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold text-amber-600">₹{special?.price || 0}</span>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline">{special?.category || "Unknown"}</Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeSpecial(special?.id || 0)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )) || <p className="text-gray-500">No specials to display</p>}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Add Special Modal */}
+        <Dialog open={showAddSpecial} onOpenChange={setShowAddSpecial}>
+          <DialogContent aria-describedby="add-special-description">
+            <DialogHeader>
+              <DialogTitle>Add Today's Special</DialogTitle>
+            </DialogHeader>
+            <div id="add-special-description" className="sr-only">
+              Add a new special item to today's menu by selecting an existing item or creating a new one.
+            </div>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="existingItem">Select Existing Item (Optional)</Label>
+                <Select
+                  value={selectedExistingItem || "create-new"}
+                  onValueChange={handleExistingItemSelect}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose from existing menu items" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="create-new">Create New Item</SelectItem>
+                    {existingMenuItems.map((item) => (
+                      <SelectItem key={item.id} value={item.id.toString()}>
+                        {item.name} - ₹{item.price} ({item.category})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="specialName">Name</Label>
+                <Input
+                  id="specialName"
+                  value={newSpecial.name}
+                  onChange={(e) => setNewSpecial({ ...newSpecial, name: e.target.value })}
+                  placeholder="Special item name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="specialPrice">Price</Label>
+                <Input
+                  id="specialPrice"
+                  type="number"
+                  value={newSpecial.price}
+                  onChange={(e) => setNewSpecial({ ...newSpecial, price: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <Label htmlFor="specialCategory">Category</Label>
+                <Select
+                  value={newSpecial.category}
+                  onValueChange={(value) => setNewSpecial({ ...newSpecial, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Tea">Tea</SelectItem>
+                    <SelectItem value="Coffee">Coffee</SelectItem>
+                    <SelectItem value="Juice">Juice</SelectItem>
+                    <SelectItem value="Shakes">Shakes</SelectItem>
+                    <SelectItem value="Ice Cream">Ice Cream</SelectItem>
+                    <SelectItem value="Food">Food</SelectItem>
+                    <SelectItem value="Snacks">Snacks</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="specialDescription">Description</Label>
+                <Textarea
+                  id="specialDescription"
+                  value={newSpecial.description}
+                  onChange={(e) => setNewSpecial({ ...newSpecial, description: e.target.value })}
+                  placeholder="Describe the special item"
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setShowAddSpecial(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={addTodaysSpecial} className="bg-amber-600 hover:bg-amber-700">
+                  Add Special
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  )
+}
