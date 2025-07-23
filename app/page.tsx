@@ -31,6 +31,22 @@ import { MobileMenuSearch } from "@/components/mobile-menu-search"
 import { MenuSearchBar } from "@/components/menu-search-bar"
 import { useToast } from "@/hooks/use-toast"
 
+// Helper function to convert menu item name to file name
+function getImageFileName(itemName: string): string {
+  return itemName
+    .toLowerCase()                    // Convert to lowercase
+    .replace(/[^a-z0-9\s]/g, '')     // Remove special characters
+    .trim()                          // Remove leading/trailing spaces
+    .replace(/\s+/g, '-')            // Replace spaces with hyphens
+    + '.jpg'                         // Add file extension
+}
+
+// Examples:
+// getImageFileName("Normal Tea")                    // → "normal-tea.jpg"
+// getImageFileName("Green Tea with Honey")          // → "green-tea-with-honey.jpg" 
+// getImageFileName("Coffee On The Rocks")           // → "coffee-on-the-rocks.jpg"
+// getImageFileName("Choco Peanut Nutella Sandwich") // → "choco-peanut-nutella-sandwich.jpg"
+
 const menuItems = [
   // Tea Items
   {
@@ -39,7 +55,7 @@ const menuItems = [
     price: 15,
     category: "Tea",
     description: "Classic Indian tea",
-    image: "/placeholder.svg?height=200&width=200&text=Normal+Tea",
+    image: "/images/menu/normal-tea.jpg", // 👈 Follows naming convention
   },
   {
     id: 2,
@@ -47,7 +63,7 @@ const menuItems = [
     price: 15,
     category: "Tea",
     description: "Pure black tea",
-    image: "/placeholder.svg?height=200&width=200&text=Black+Tea",
+    image: "/images/menu/black-tea.jpg", // 👈 Follows naming convention
   },
   {
     id: 3,
@@ -55,7 +71,7 @@ const menuItems = [
     price: 22,
     category: "Tea",
     description: "Traditional spiced tea",
-    image: "/placeholder.svg?height=200&width=200&text=Masala+Tea",
+    image: "/images/menu/masala-tea.jpg", // 👈 Follows naming convention
   },
   {
     id: 4,
@@ -63,7 +79,7 @@ const menuItems = [
     price: 25,
     category: "Tea",
     description: "Premium spiced tea",
-    image: "/placeholder.svg?height=200&width=200&text=Special+Masala+Tea",
+    image: "/images/menu/special-masala-tea.jpg", // 👈 Follows naming convention
   },
   {
     id: 5,
@@ -71,7 +87,7 @@ const menuItems = [
     price: 22,
     category: "Tea",
     description: "Cardamom flavored tea",
-    image: "/placeholder.svg?height=200&width=200&text=Elachi+Tea",
+    image: "/images/menu/elachi-tea.jpg", // 👈 Follows naming convention
   },
   {
     id: 6,
@@ -79,7 +95,7 @@ const menuItems = [
     price: 22,
     category: "Tea",
     description: "Fresh ginger tea",
-    image: "/placeholder.svg?height=200&width=200&text=Ginger+Tea",
+    image: "/images/menu/ginger-tea.jpg", // 👈 Follows naming convention
   },
   {
     id: 7,
@@ -87,7 +103,7 @@ const menuItems = [
     price: 25,
     category: "Tea",
     description: "Healthy green tea",
-    image: "/placeholder.svg?height=200&width=200&text=Green+Tea",
+    image: "/images/menu/green-tea.jpg", // 👈 Follows naming convention
   },
   {
     id: 8,
@@ -95,7 +111,7 @@ const menuItems = [
     price: 29,
     category: "Tea",
     description: "Green tea with natural honey",
-    image: "/placeholder.svg?height=200&width=200&text=Green+Tea+Honey",
+    image: "/images/menu/green-tea-with-honey.jpg", // 👈 Follows naming convention
   },
   {
     id: 9,
@@ -103,7 +119,7 @@ const menuItems = [
     price: 25,
     category: "Tea",
     description: "Refreshing honey lemon tea",
-    image: "/placeholder.svg?height=200&width=200&text=Honey+Lemon+Tea",
+    image: "/images/menu/honey-lemon-tea.jpg", // 👈 Follows naming convention
   },
   {
     id: 10,
@@ -111,7 +127,7 @@ const menuItems = [
     price: 29,
     category: "Tea",
     description: "Chocolate flavored tea",
-    image: "/placeholder.svg?height=200&width=200&text=Chocolate+Tea",
+    image: "/images/menu/chocolate-tea.jpg", // 👈 Follows naming convention
   },
   {
     id: 11,
@@ -119,7 +135,7 @@ const menuItems = [
     price: 49,
     category: "Tea",
     description: "Traditional Kashmiri tea",
-    image: "/placeholder.svg?height=200&width=200&text=Kashmiri+Kahwa",
+    image: "/images/menu/kashmiri-kahwa.jpg", // 👈 Follows naming convention
   },
 
   // Coffee Items
@@ -129,7 +145,7 @@ const menuItems = [
     price: 20,
     category: "Coffee",
     description: "Pure black coffee",
-    image: "/placeholder.svg?height=200&width=200&text=Black+Coffee",
+    image: "/images/menu/black-coffee.jpg", // 👈 Follows naming convention
   },
   {
     id: 13,
@@ -137,7 +153,7 @@ const menuItems = [
     price: 22,
     category: "Coffee",
     description: "Coffee with milk",
-    image: "/placeholder.svg?height=200&width=200&text=Milk+Coffee",
+    image: "/images/menu/milk-coffee.jpg", // 👈 Follows naming convention
   },
   {
     id: 14,
@@ -145,7 +161,7 @@ const menuItems = [
     price: 22,
     category: "Coffee",
     description: "South Indian filter coffee",
-    image: "/placeholder.svg?height=200&width=200&text=Filter+Coffee",
+    image: "/images/menu/special-filter-coffee.jpg", // 👈 Follows naming convention
   },
   {
     id: 15,
@@ -153,7 +169,7 @@ const menuItems = [
     price: 22,
     category: "Coffee",
     description: "Coffee sweetened with jaggery",
-    image: "/placeholder.svg?height=200&width=200&text=Jaggery+Coffee",
+    image: "/images/menu/jaggery-coffee.jpg", // 👈 Follows naming convention
   },
   {
     id: 16,
@@ -161,7 +177,7 @@ const menuItems = [
     price: 29,
     category: "Coffee",
     description: "Coffee with chocolate",
-    image: "/placeholder.svg?height=200&width=200&text=Chocolate+Coffee",
+    image: "/images/menu/chocolate-coffee.jpg", // 👈 Follows naming convention
   },
   {
     id: 17,
@@ -169,7 +185,7 @@ const menuItems = [
     price: 90,
     category: "Coffee",
     description: "Premium Belgian coffee",
-    image: "/placeholder.svg?height=200&width=200&text=Belgian+Coffee",
+    image: "/images/menu/belgian-coffee.jpg", // 👈 Follows naming convention
   },
   {
     id: 18,
@@ -177,7 +193,7 @@ const menuItems = [
     price: 90,
     category: "Coffee",
     description: "Iced coffee",
-    image: "/placeholder.svg?height=200&width=200&text=Coffee+Rocks",
+    image: "/images/menu/coffee-on-the-rocks.jpg", // 👈 Follows naming convention
   },
   {
     id: 19,
@@ -185,7 +201,7 @@ const menuItems = [
     price: 90,
     category: "Coffee",
     description: "Ferrero flavored coffee",
-    image: "/placeholder.svg?height=200&width=200&text=Ferrero+Coffee",
+    image: "/images/menu/ferrero-coffee.jpg", // 👈 Follows naming convention
   },
   {
     id: 20,
@@ -193,7 +209,7 @@ const menuItems = [
     price: 80,
     category: "Coffee",
     description: "Strong coffee blend",
-    image: "/placeholder.svg?height=200&width=200&text=Hard+Rock+Coffee",
+    image: "/images/menu/hard-rock-coffee.jpg", // 👈 Follows naming convention
   },
   {
     id: 21,
@@ -201,7 +217,7 @@ const menuItems = [
     price: 100,
     category: "Coffee",
     description: "Rich mud coffee",
-    image: "/placeholder.svg?height=200&width=200&text=Mud+Coffee",
+    image: "/images/menu/mud-coffee.jpg", // 👈 Follows naming convention
   },
   {
     id: 22,
@@ -209,7 +225,7 @@ const menuItems = [
     price: 90,
     category: "Coffee",
     description: "Traditional Turkish coffee",
-    image: "/placeholder.svg?height=200&width=200&text=Turkish+Coffee",
+    image: "/images/menu/turkish-coffee.jpg", // 👈 Follows naming convention
   },
 
   // Juices & Beverages
@@ -219,7 +235,7 @@ const menuItems = [
     price: 35,
     category: "Juice",
     description: "Fresh lime juice",
-    image: "/placeholder.svg?height=200&width=200&text=Fresh+Lime",
+    image: "/images/menu/fresh-lime.jpg", // 👈 Follows naming convention
   },
   {
     id: 24,
@@ -227,7 +243,7 @@ const menuItems = [
     price: 40,
     category: "Juice",
     description: "Ginger lime juice",
-    image: "/placeholder.svg?height=200&width=200&text=Ginger+Lime",
+    image: "/images/menu/ginger-lime.jpg", // 👈 Follows naming convention
   },
   {
     id: 25,
@@ -235,7 +251,7 @@ const menuItems = [
     price: 35,
     category: "Juice",
     description: "Cumin flavored drink",
-    image: "/placeholder.svg?height=200&width=200&text=Jaljeera",
+    image: "/images/menu/jaljeera.jpg", // 👈 Follows naming convention
   },
   {
     id: 26,
@@ -243,7 +259,7 @@ const menuItems = [
     price: 29,
     category: "Juice",
     description: "Fresh watermelon juice",
-    image: "/placeholder.svg?height=200&width=200&text=Watermelon",
+    image: "/images/menu/watermelon.jpg", // 👈 Follows naming convention
   },
   {
     id: 27,
@@ -251,7 +267,7 @@ const menuItems = [
     price: 50,
     category: "Juice",
     description: "Premium watermelon juice",
-    image: "/placeholder.svg?height=200&width=200&text=Water+Melon",
+    image: "/images/menu/water-melon.jpg", // 👈 Follows naming convention
   },
   {
     id: 28,
@@ -259,7 +275,7 @@ const menuItems = [
     price: 50,
     category: "Juice",
     description: "Fresh pineapple juice",
-    image: "/placeholder.svg?height=200&width=200&text=Pineapple",
+    image: "/images/menu/pineapple.jpg", // 👈 Follows naming convention
   },
   {
     id: 29,
@@ -267,7 +283,7 @@ const menuItems = [
     price: 49,
     category: "Juice",
     description: "Fresh mango juice",
-    image: "/placeholder.svg?height=200&width=200&text=Mango",
+    image: "/images/menu/mango.jpg", // 👈 Follows naming convention
   },
   {
     id: 30,
@@ -275,7 +291,7 @@ const menuItems = [
     price: 70,
     category: "Juice",
     description: "Premium Alphonso mango",
-    image: "/placeholder.svg?height=200&width=200&text=Mango+Alphonso",
+    image: "/images/menu/mango-alphonso.jpg", // 👈 Follows naming convention
   },
   {
     id: 31,
@@ -283,7 +299,7 @@ const menuItems = [
     price: 60,
     category: "Juice",
     description: "Fresh banana shake",
-    image: "/placeholder.svg?height=200&width=200&text=Banana",
+    image: "/images/menu/banana.jpg", // 👈 Follows naming convention
   },
   {
     id: 32,
@@ -291,7 +307,7 @@ const menuItems = [
     price: 60,
     category: "Juice",
     description: "Fresh chickoo shake",
-    image: "/placeholder.svg?height=200&width=200&text=Chickoo",
+    image: "/images/menu/chickoo.jpg", // 👈 Follows naming convention
   },
   {
     id: 33,
@@ -299,7 +315,7 @@ const menuItems = [
     price: 60,
     category: "Juice",
     description: "Fresh musk melon juice",
-    image: "/placeholder.svg?height=200&width=200&text=Musk+Melon",
+    image: "/images/menu/musk-melon.jpg", // 👈 Follows naming convention
   },
   {
     id: 34,
@@ -307,7 +323,7 @@ const menuItems = [
     price: 80,
     category: "Juice",
     description: "Fresh avocado shake",
-    image: "/placeholder.svg?height=200&width=200&text=Avocado",
+    image: "/images/menu/avocado.jpg", // 👈 Follows naming convention
   },
 
   // Milkshakes & Shakes
@@ -317,7 +333,7 @@ const menuItems = [
     price: 49,
     category: "Shakes",
     description: "Almond milk shake",
-    image: "/placeholder.svg?height=200&width=200&text=Badam+Milk",
+    image: "/images/menu/badam-milk.jpg", // 👈 Follows naming convention
   },
   {
     id: 36,
@@ -325,7 +341,7 @@ const menuItems = [
     price: 39,
     category: "Shakes",
     description: "Boost flavored milk",
-    image: "/placeholder.svg?height=200&width=200&text=Boost+Milk",
+    image: "/images/menu/boost-milk.jpg", // 👈 Follows naming convention
   },
   {
     id: 37,
@@ -333,7 +349,7 @@ const menuItems = [
     price: 29,
     category: "Shakes",
     description: "Cold boost drink",
-    image: "/placeholder.svg?height=200&width=200&text=Cold+Boost",
+    image: "/images/menu/cold-boost.jpg", // 👈 Follows naming convention
   },
   {
     id: 38,
@@ -341,7 +357,7 @@ const menuItems = [
     price: 29,
     category: "Shakes",
     description: "Cold Bournvita drink",
-    image: "/placeholder.svg?height=200&width=200&text=Cold+Bournvita",
+    image: "/images/menu/cold-bournvita.jpg", // 👈 Follows naming convention
   },
   {
     id: 39,
@@ -349,7 +365,7 @@ const menuItems = [
     price: 39,
     category: "Shakes",
     description: "Horlicks milk shake",
-    image: "/placeholder.svg?height=200&width=200&text=Horlicks+Milk",
+    image: "/images/menu/horlicks-milk.jpg", // 👈 Follows naming convention
   },
   {
     id: 40,
@@ -357,7 +373,7 @@ const menuItems = [
     price: 49,
     category: "Shakes",
     description: "Hot chocolate milk",
-    image: "/placeholder.svg?height=200&width=200&text=Hot+Chocolate",
+    image: "/images/menu/hot-chocolate-milk.jpg", // 👈 Follows naming convention
   },
   {
     id: 41,
@@ -365,7 +381,7 @@ const menuItems = [
     price: 35,
     category: "Shakes",
     description: "Pilani special milk",
-    image: "/placeholder.svg?height=200&width=200&text=Pilani+Milk",
+    image: "/images/menu/pilani-milk.jpg", // 👈 Follows naming convention
   },
   {
     id: 42,
@@ -373,7 +389,7 @@ const menuItems = [
     price: 20,
     category: "Shakes",
     description: "Traditional buttermilk",
-    image: "/placeholder.svg?height=200&width=200&text=Butter+Milk",
+    image: "/images/menu/butter-milk.jpg", // 👈 Follows naming convention
   },
   {
     id: 43,
@@ -381,7 +397,7 @@ const menuItems = [
     price: 100,
     category: "Shakes",
     description: "Nutella flavored shake",
-    image: "/placeholder.svg?height=200&width=200&text=Nutella+Shake",
+    image: "/images/menu/nutella-shake.jpg", // 👈 Follows naming convention
   },
   {
     id: 44,
@@ -389,7 +405,7 @@ const menuItems = [
     price: 100,
     category: "Shakes",
     description: "Mixed dry fruit shake",
-    image: "/placeholder.svg?height=200&width=200&text=Dry+Fruit+Shake",
+    image: "/images/menu/dry-fruit-shake.jpg", // 👈 Follows naming convention
   },
   {
     id: 45,
@@ -397,7 +413,7 @@ const menuItems = [
     price: 90,
     category: "Shakes",
     description: "Blueberry shake",
-    image: "/placeholder.svg?height=200&width=200&text=Blueberry+Shake",
+    image: "/images/menu/berry-blue-berry-shake.jpg", // 👈 Follows naming convention
   },
   {
     id: 46,
@@ -405,7 +421,7 @@ const menuItems = [
     price: 90,
     category: "Shakes",
     description: "Natural protein shake",
-    image: "/placeholder.svg?height=200&width=200&text=Natural+Protein",
+    image: "/images/menu/natural-protein.jpg", // 👈 Follows naming convention
   },
   {
     id: 47,
@@ -413,7 +429,7 @@ const menuItems = [
     price: 100,
     category: "Shakes",
     description: "Whey protein shake",
-    image: "/placeholder.svg?height=200&width=200&text=Whey+Protein",
+    image: "/images/menu/whey-protein.jpg", // 👈 Follows naming convention
   },
 
   // Ice Cream & Desserts
@@ -423,7 +439,7 @@ const menuItems = [
     price: 20,
     category: "Ice Cream",
     description: "Single ice cream scoop",
-    image: "/placeholder.svg?height=200&width=200&text=Ice+Cream+Scoop",
+    image: "/images/menu/ice-cream-scoop.jpg", // 👈 Follows naming convention
   },
   {
     id: 49,
@@ -431,7 +447,7 @@ const menuItems = [
     price: 45,
     category: "Ice Cream",
     description: "Vanilla ice cream special",
-    image: "/placeholder.svg?height=200&width=200&text=Vanilla+Shoo",
+    image: "/images/menu/vanilla-shoo-shoo.jpg", // 👈 Follows naming convention
   },
   {
     id: 50,
@@ -439,7 +455,7 @@ const menuItems = [
     price: 45,
     category: "Ice Cream",
     description: "Strawberry ice cream special",
-    image: "/placeholder.svg?height=200&width=200&text=Strawberry+Shoo",
+    image: "/images/menu/strawberry-shoo-shoo.jpg", // 👈 Follows naming convention
   },
   {
     id: 51,
@@ -447,7 +463,7 @@ const menuItems = [
     price: 49,
     category: "Ice Cream",
     description: "Rich chocolate ice cream",
-    image: "/placeholder.svg?height=200&width=200&text=Chocolate+Ice+Cream",
+    image: "/images/menu/chocolate-ice-cream.jpg", // 👈 Follows naming convention
   },
   {
     id: 52,
@@ -455,7 +471,7 @@ const menuItems = [
     price: 49,
     category: "Ice Cream",
     description: "Madagascar vanilla ice cream",
-    image: "/placeholder.svg?height=200&width=200&text=Madagascar+Ice",
+    image: "/images/menu/madagascar-ice-cream.jpg", // 👈 Follows naming convention
   },
   {
     id: 53,
@@ -463,7 +479,7 @@ const menuItems = [
     price: 49,
     category: "Ice Cream",
     description: "Red velvet flavored ice cream",
-    image: "/placeholder.svg?height=200&width=200&text=Red+Velvet+Ice",
+    image: "/images/menu/red-velvet-ice-cream.jpg", // 👈 Follows naming convention
   },
   {
     id: 54,
@@ -471,7 +487,7 @@ const menuItems = [
     price: 49,
     category: "Ice Cream",
     description: "Butterscotch ice cream",
-    image: "/placeholder.svg?height=200&width=200&text=Butterscotch",
+    image: "/images/menu/butterscotch.jpg", // 👈 Follows naming convention
   },
   {
     id: 55,
@@ -479,7 +495,7 @@ const menuItems = [
     price: 49,
     category: "Ice Cream",
     description: "Chocolate ice cream",
-    image: "/placeholder.svg?height=200&width=200&text=Chocolate",
+    image: "/images/menu/chocolate.jpg", // 👈 Follows naming convention
   },
   {
     id: 56,
@@ -487,7 +503,7 @@ const menuItems = [
     price: 45,
     category: "Ice Cream",
     description: "Traditional malai kulfi",
-    image: "/placeholder.svg?height=200&width=200&text=Malai+Kulfi",
+    image: "/images/menu/malai-kulfi.jpg", // 👈 Follows naming convention
   },
   {
     id: 57,
@@ -495,7 +511,7 @@ const menuItems = [
     price: 45,
     category: "Ice Cream",
     description: "Punjab style kulfi",
-    image: "/placeholder.svg?height=200&width=200&text=Punjab+Kulfi",
+    image: "/images/menu/punjab-kulfi.jpg", // 👈 Follows naming convention
   },
 
   // Food Items (truncated for brevity - continuing with key items)
@@ -505,7 +521,7 @@ const menuItems = [
     price: 59,
     category: "Food",
     description: "Fresh vegetable sandwich",
-    image: "/placeholder.svg?height=200&width=200&text=Veg+Sandwich",
+    image: "/images/menu/veg-sandwich.jpg", // 👈 Follows naming convention
   },
   {
     id: 95,
@@ -513,7 +529,7 @@ const menuItems = [
     price: 120,
     category: "Food",
     description: "Classic margherita pizza",
-    image: "/placeholder.svg?height=200&width=200&text=Margherita+Pizza",
+    image: "/images/menu/margherita-pizza.jpg", // 👈 Follows naming convention
   },
   {
     id: 118,
@@ -521,7 +537,7 @@ const menuItems = [
     price: 79,
     category: "Snacks",
     description: "Classic french fries",
-    image: "/placeholder.svg?height=200&width=200&text=Classic+Fries",
+    image: "/images/menu/classic-fries.jpg", // 👈 Follows naming convention
   },
 ]
 

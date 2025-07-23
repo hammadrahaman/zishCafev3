@@ -28,20 +28,12 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
 
-    if (!customerName.trim()) {
-      newErrors.customerName = "Name is required"
-    }
-
-    if (!email.trim()) {
-      newErrors.email = "Email is required"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // Only validate email format if email is provided
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = "Please enter a valid email address"
     }
 
-    if (!feedback.trim()) {
-      newErrors.feedback = "Feedback is required"
-    }
-
+    // Only rating is required
     if (rating === 0) {
       newErrors.rating = "Please provide a rating"
     }
@@ -59,10 +51,10 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
     const feedbackData = {
       id: Date.now().toString(),
-      customerName,
-      email,
+      customerName: customerName.trim() || "Anonymous",
+      email: email.trim() || "Not provided",
       rating,
-      feedback,
+      feedback: feedback.trim() || "No additional feedback provided",
       timestamp: new Date().toISOString(),
       date: new Date().toDateString(),
     }
@@ -101,7 +93,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
           {/* Customer Information */}
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <Label htmlFor="customerName">Full Name *</Label>
+              <Label htmlFor="customerName">Full Name</Label>
               <Input
                 id="customerName"
                 value={customerName}
@@ -113,7 +105,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
             </div>
 
             <div>
-              <Label htmlFor="email">Email Address *</Label>
+              <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
                 type="email"
@@ -152,16 +144,14 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
           {/* Feedback */}
           <div>
-            <Label htmlFor="feedback">Your Feedback *</Label>
+            <Label htmlFor="feedback">Your Feedback</Label>
             <Textarea
               id="feedback"
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
               placeholder="Tell us about your experience..."
               rows={4}
-              className={errors.feedback ? "border-red-500" : ""}
             />
-            {errors.feedback && <p className="text-sm text-red-500 mt-1">{errors.feedback}</p>}
           </div>
 
           {/* Submit Button */}
