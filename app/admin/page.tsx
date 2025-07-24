@@ -24,26 +24,20 @@ import {
   LogOut,
   Home,
   TrendingUp,
-  Download, // Add this
-  ShoppingCart,
+  Download,
   Plus,
-  Calendar,
   MessageSquare,
   Package2,
-  Eye,
-  Truck,
-  Receipt,
-  Calculator,
-  Star, // Added for specials tab
-  BarChart3, // Add this
-  FileSpreadsheet, // Add this
-  FileText, // Add this
+  ShoppingCart,
+  ClipboardList,
+  BarChart3,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
-import { InventoryManagement } from "@/components/inventory-management"
-import { StockPurchaseManagement } from "@/components/stock-purchase-management"
-import { StockInsightsDashboard } from "@/components/stock-insights-dashboard"
+import { InventoryItems } from "@/components/inventory-items"
+import { OrderInventory } from "@/components/order-inventory"
+import { RequiredInventory } from "@/components/required-inventory"
+import { InventoryInsights } from "@/components/inventory-insights"
 import { FeedbackManagement } from "@/components/feedback-management"
 
 interface Order {
@@ -72,6 +66,16 @@ interface Special {
   category: string
   description: string
   image?: string
+}
+
+// Helper function to convert menu item name to file name
+function getImageFileName(itemName: string): string {
+  return itemName
+    .toLowerCase()                    // Convert to lowercase
+    .replace(/[^a-z0-9\s]/g, '')     // Remove special characters
+    .trim()                          // Remove leading/trailing spaces
+    .replace(/\s+/g, '-')            // Replace spaces with hyphens
+    + '.jpg'                         // Add file extension
 }
 
 export default function AdminPage() {
@@ -985,7 +989,7 @@ export default function AdminPage() {
         price: newSpecial.price ? Number.parseFloat(newSpecial.price) : 0,
         category: newSpecial.category || "Other",
         description: newSpecial.description,
-        image: `/images/menu/${getImageFileName(newSpecial.name)}`,
+        image: `/images/menu/${newSpecial.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, '-')}.jpg`,
       }
 
       const updatedSpecials = [...todaysSpecials, special]
@@ -1113,7 +1117,7 @@ export default function AdminPage() {
     .reduce((sum, order) => sum + Number.parseFloat(order?.total || "0"), 0) || 0
 
   // Fast moving products calculation (remains the same)
-  const productCounts = {}
+  const productCounts: { [key: string]: number } = {}
   orders?.forEach((order) => {
     if (order?.items && Array.isArray(order.items)) {
       order.items.forEach((item) => {
@@ -1371,44 +1375,43 @@ export default function AdminPage() {
               
               {userType === "superadmin" && (
                 <Button
-                  variant={activeTab === "inventory" ? "default" : "ghost"}
-                  onClick={() => setActiveTab("inventory")}
+                  variant={activeTab === "inventory-items" ? "default" : "ghost"}
+                  onClick={() => setActiveTab("inventory-items")}
                   className="flex-1 sm:flex-none"
                 >
-                  <Package className="h-4 w-4 mr-2" />
-                  Inventory
+                  <Package2 className="h-4 w-4 mr-2" />
+                  Inventory Items
                 </Button>
               )}
 
               <Button
-                variant={activeTab === "stock" ? "default" : "ghost"}
-                onClick={() => setActiveTab("stock")}
+                variant={activeTab === "order-inventory" ? "default" : "ghost"}
+                onClick={() => setActiveTab("order-inventory")}
                 className="flex-1 sm:flex-none"
               >
                 <ShoppingCart className="h-4 w-4 mr-2" />
-                Stock Management
+                Order Inventory
               </Button>
 
-              {/* Only show Insights for Super Admin */}
               {userType === "superadmin" && (
                 <Button
-                  variant={activeTab === "insights" ? "default" : "ghost"}
-                  onClick={() => setActiveTab("insights")}
+                  variant={activeTab === "required-inventory" ? "default" : "ghost"}
+                  onClick={() => setActiveTab("required-inventory")}
                   className="flex-1 sm:flex-none"
                 >
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Insights
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Required Inventory
                 </Button>
               )}
 
               {userType === "superadmin" && (
                 <Button
-                  variant={activeTab === "specials" ? "default" : "ghost"}
-                  onClick={() => setActiveTab("specials")}
+                  variant={activeTab === "inventory-insights" ? "default" : "ghost"}
+                  onClick={() => setActiveTab("inventory-insights")}
                   className="flex-1 sm:flex-none"
                 >
-                  <Star className="h-4 w-4 mr-2" />
-                  Today's Specials
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Inventory Insights
                 </Button>
               )}
 
@@ -1427,12 +1430,14 @@ export default function AdminPage() {
         )}
 
         {/* Content based on active tab */}
-        {activeTab === "insights" && userType === "superadmin" ? (
-          <StockInsightsDashboard userType={userType} />
-        ) : activeTab === "inventory" && userType === "superadmin" ? (
-          <InventoryManagement userType={userType} />
-        ) : activeTab === "stock" ? (
-          <StockPurchaseManagement userType={userType} currentUser={currentUser} />
+        {activeTab === "inventory-items" && userType === "superadmin" ? (
+          <InventoryItems userType={userType} />
+        ) : activeTab === "order-inventory" ? (
+          <OrderInventory userType={userType} currentUser={currentUser} />
+        ) : activeTab === "required-inventory" && userType === "superadmin" ? (
+          <RequiredInventory userType={userType} />
+        ) : activeTab === "inventory-insights" && userType === "superadmin" ? (
+          <InventoryInsights userType={userType} />
         ) : activeTab === "feedback" && userType === "superadmin" ? (
           <FeedbackManagement userType={userType} />
         ) : (
