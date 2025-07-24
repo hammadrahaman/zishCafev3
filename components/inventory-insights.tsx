@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   BarChart3,
   Download,
@@ -15,55 +16,53 @@ import {
   Calendar,
   TrendingUp,
   TrendingDown,
-  Package,
+  Package2,
   DollarSign,
-  Users,
   ShoppingCart,
+  Users,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
-interface StockPurchase {
+interface InventoryOrder {
   id: string
   itemId: string
   itemName: string
-  purchaseQuantity: number
-  purchasePricePerUnit: number
-  totalPurchaseAmount: number
-  purchaseDate: string
-  supplier: string
-  addedBy: string
+  unit: string
+  rate: number
+  quantity: number
+  totalAmount: number
+  notes: string
+  status: "pending" | "purchased"
+  orderedBy: string
+  orderDate: string
   createdAt: string
 }
 
 interface MonthlyMetrics {
   totalItemsPurchased: number
   totalQuantityPurchased: number
-  totalValuePurchased: number
-  mostPurchasedItem: { name: string; quantity: number; unit: string } | null
-  leastPurchasedItem: { name: string; quantity: number; unit: string } | null
-  topSupplier: { name: string; purchases: number } | null
+  totalAmountSpent: number
+  mostPurchasedItem: { name: string; quantity: number; amount: number } | null
+  topSpender: { name: string; amount: number; orders: number } | null
   uniqueItems: number
-  averagePurchaseValue: number
+  averageOrderValue: number
   purchaseCount: number
 }
 
-interface StockInsightsDashboardProps {
+interface InventoryInsightsProps {
   userType: "admin" | "superadmin" | null
 }
 
-export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps) {
-  const [stockPurchases, setStockPurchases] = useState<StockPurchase[]>([])
-  const [inventory, setInventory] = useState<any[]>([])
+export function InventoryInsights({ userType }: InventoryInsightsProps) {
+  const [inventoryOrders, setInventoryOrders] = useState<InventoryOrder[]>([])
   const [dateFilter, setDateFilter] = useState<"thisMonth" | "lastMonth" | "custom">("thisMonth")
   const [customStartDate, setCustomStartDate] = useState("")
   const [customEndDate, setCustomEndDate] = useState("")
   const { toast } = useToast()
 
   useEffect(() => {
-    const savedStockPurchases = JSON.parse(localStorage.getItem("cafeStockPurchases") || "[]")
-    const savedInventory = JSON.parse(localStorage.getItem("cafeInventory") || "[]")
-    setStockPurchases(savedStockPurchases)
-    setInventory(savedInventory)
+    const savedOrders = JSON.parse(localStorage.getItem("inventoryOrders") || "[]")
+    setInventoryOrders(savedOrders)
   }, [])
 
   // Helper function to get month data
@@ -75,82 +74,81 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
     return { start: startOfMonth, end: endOfMonth }
   }
 
-  // Filter purchases by date range
-  const getFilteredPurchases = (startDate: Date, endDate: Date) => {
-    return stockPurchases.filter(purchase => {
-      const purchaseDate = new Date(purchase.purchaseDate)
-      return purchaseDate >= startDate && purchaseDate <= endDate
+  // Filter purchased orders by date range
+  const getFilteredPurchasedOrders = (startDate: Date, endDate: Date) => {
+    return inventoryOrders.filter(order => {
+      const orderDate = new Date(order.orderDate)
+      return order.status === "purchased" && orderDate >= startDate && orderDate <= endDate
     })
   }
 
-  // Calculate metrics for a given period
-  const calculateMetrics = (purchases: StockPurchase[]): MonthlyMetrics => {
-    if (purchases.length === 0) {
+  // Calculate metrics for purchased orders only
+  const calculateMetrics = (orders: InventoryOrder[]): MonthlyMetrics => {
+    if (orders.length === 0) {
       return {
         totalItemsPurchased: 0,
         totalQuantityPurchased: 0,
-        totalValuePurchased: 0,
+        totalAmountSpent: 0,
         mostPurchasedItem: null,
-        leastPurchasedItem: null,
-        topSupplier: null,
+        topSpender: null,
         uniqueItems: 0,
-        averagePurchaseValue: 0,
+        averageOrderValue: 0,
         purchaseCount: 0,
       }
     }
 
     // Calculate totals
-    const totalItemsPurchased = purchases.length
-    const totalQuantityPurchased = purchases.reduce((sum, p) => sum + p.purchaseQuantity, 0)
-    const totalValuePurchased = purchases.reduce((sum, p) => sum + p.totalPurchaseAmount, 0)
+    const totalItemsPurchased = orders.length
+    const totalQuantityPurchased = orders.reduce((sum, o) => sum + o.quantity, 0)
+    const totalAmountSpent = orders.reduce((sum, o) => sum + o.totalAmount, 0)
 
-    // Group by item for most/least purchased
-    const itemQuantities: { [key: string]: { quantity: number; name: string; unit: string } } = {}
-    purchases.forEach(purchase => {
-      const item = inventory.find(inv => inv.id === purchase.itemId)
-      const unit = item?.unit || ""
-      
-      if (itemQuantities[purchase.itemName]) {
-        itemQuantities[purchase.itemName].quantity += purchase.purchaseQuantity
+    // Group by item for most purchased
+    const itemQuantities: { [key: string]: { quantity: number; amount: number; name: string } } = {}
+    orders.forEach(order => {
+      if (itemQuantities[order.itemName]) {
+        itemQuantities[order.itemName].quantity += order.quantity
+        itemQuantities[order.itemName].amount += order.totalAmount
       } else {
-        itemQuantities[purchase.itemName] = {
-          quantity: purchase.purchaseQuantity,
-          name: purchase.itemName,
-          unit: unit
+        itemQuantities[order.itemName] = {
+          quantity: order.quantity,
+          amount: order.totalAmount,
+          name: order.itemName
         }
       }
     })
 
     const itemEntries = Object.values(itemQuantities)
     const mostPurchasedItem = itemEntries.length > 0 
-      ? itemEntries.reduce((max, current) => current.quantity > max.quantity ? current : max)
+      ? itemEntries.reduce((max, current) => current.amount > max.amount ? current : max)
       : null
 
-    const leastPurchasedItem = itemEntries.length > 0
-      ? itemEntries.reduce((min, current) => current.quantity < min.quantity ? current : min)
-      : null
-
-    // Group by supplier
-    const supplierCounts: { [key: string]: number } = {}
-    purchases.forEach(purchase => {
-      const supplier = purchase.supplier || "Not specified"
-      supplierCounts[supplier] = (supplierCounts[supplier] || 0) + 1
+    // Group by user for top spender
+    const userSpending: { [key: string]: { amount: number; orders: number } } = {}
+    orders.forEach(order => {
+      if (userSpending[order.orderedBy]) {
+        userSpending[order.orderedBy].amount += order.totalAmount
+        userSpending[order.orderedBy].orders += 1
+      } else {
+        userSpending[order.orderedBy] = {
+          amount: order.totalAmount,
+          orders: 1
+        }
+      }
     })
 
-    const supplierEntries = Object.entries(supplierCounts)
-    const topSupplier = supplierEntries.length > 0
-      ? supplierEntries.reduce((max, current) => current[1] > max[1] ? current : max)
+    const userEntries = Object.entries(userSpending)
+    const topSpender = userEntries.length > 0
+      ? userEntries.reduce((max, current) => current[1].amount > max[1].amount ? current : max)
       : null
 
     return {
       totalItemsPurchased,
       totalQuantityPurchased,
-      totalValuePurchased,
+      totalAmountSpent,
       mostPurchasedItem,
-      leastPurchasedItem,
-      topSupplier: topSupplier ? { name: topSupplier[0], purchases: topSupplier[1] } : null,
+      topSpender: topSpender ? { name: topSpender[0], amount: topSpender[1].amount, orders: topSpender[1].orders } : null,
       uniqueItems: Object.keys(itemQuantities).length,
-      averagePurchaseValue: totalValuePurchased / totalItemsPurchased,
+      averageOrderValue: totalAmountSpent / totalItemsPurchased,
       purchaseCount: totalItemsPurchased,
     }
   }
@@ -179,11 +177,11 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
         return null
     }
 
-    const filteredPurchases = getFilteredPurchases(startDate, endDate)
-    return calculateMetrics(filteredPurchases)
+    const filteredOrders = getFilteredPurchasedOrders(startDate, endDate)
+    return calculateMetrics(filteredOrders)
   }
 
-  // Get comparison data (always previous month for comparison)
+  // Get comparison data (previous month)
   const getComparisonData = () => {
     let comparisonOffset = -1
     
@@ -192,8 +190,8 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
     }
 
     const comparisonRange = getMonthRange(comparisonOffset)
-    const comparisonPurchases = getFilteredPurchases(comparisonRange.start, comparisonRange.end)
-    return calculateMetrics(comparisonPurchases)
+    const comparisonOrders = getFilteredPurchasedOrders(comparisonRange.start, comparisonRange.end)
+    return calculateMetrics(comparisonOrders)
   }
 
   const currentMetrics = getCurrentPeriodData()
@@ -205,45 +203,40 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
 
     const csvData = []
     
-    // Add headers
-    csvData.push(['Stock Insights Report'])
+    csvData.push(['Inventory Expenses Report'])
     csvData.push(['Generated on:', new Date().toLocaleString()])
     csvData.push(['Period:', getPeriodLabel()])
     csvData.push([])
     
-    // Add metrics comparison
     csvData.push(['Metric', 'Current Period', 'Previous Period', 'Change'])
     csvData.push(['Total Items Purchased', currentMetrics.totalItemsPurchased, comparisonMetrics?.totalItemsPurchased || 0, getChangeText(currentMetrics.totalItemsPurchased, comparisonMetrics?.totalItemsPurchased)])
-    csvData.push(['Total Quantity Purchased', currentMetrics.totalQuantityPurchased, comparisonMetrics?.totalQuantityPurchased || 0, getChangeText(currentMetrics.totalQuantityPurchased, comparisonMetrics?.totalQuantityPurchased)])
-    csvData.push(['Total Stock Value Purchased (₹)', currentMetrics.totalValuePurchased, comparisonMetrics?.totalValuePurchased || 0, getChangeText(currentMetrics.totalValuePurchased, comparisonMetrics?.totalValuePurchased)])
-    csvData.push(['Most Purchased Item', currentMetrics.mostPurchasedItem ? `${currentMetrics.mostPurchasedItem.name} (${currentMetrics.mostPurchasedItem.quantity} ${currentMetrics.mostPurchasedItem.unit})` : 'N/A', comparisonMetrics?.mostPurchasedItem ? `${comparisonMetrics.mostPurchasedItem.name} (${comparisonMetrics.mostPurchasedItem.quantity} ${comparisonMetrics.mostPurchasedItem.unit})` : 'N/A', ''])
-    csvData.push(['Least Purchased Item', currentMetrics.leastPurchasedItem ? `${currentMetrics.leastPurchasedItem.name} (${currentMetrics.leastPurchasedItem.quantity} ${currentMetrics.leastPurchasedItem.unit})` : 'N/A', comparisonMetrics?.leastPurchasedItem ? `${comparisonMetrics.leastPurchasedItem.name} (${comparisonMetrics.leastPurchasedItem.quantity} ${comparisonMetrics.leastPurchasedItem.unit})` : 'N/A', ''])
-    csvData.push(['Top Supplier', currentMetrics.topSupplier?.name || 'N/A', comparisonMetrics?.topSupplier?.name || 'N/A', ''])
+    csvData.push(['Total Amount Spent (₹)', currentMetrics.totalAmountSpent, comparisonMetrics?.totalAmountSpent || 0, getChangeText(currentMetrics.totalAmountSpent, comparisonMetrics?.totalAmountSpent)])
+    csvData.push(['Most Purchased Item', currentMetrics.mostPurchasedItem ? `${currentMetrics.mostPurchasedItem.name} (₹${currentMetrics.mostPurchasedItem.amount})` : 'N/A', comparisonMetrics?.mostPurchasedItem ? `${comparisonMetrics.mostPurchasedItem.name} (₹${comparisonMetrics.mostPurchasedItem.amount})` : 'N/A', ''])
+    csvData.push(['Top Spender', currentMetrics.topSpender?.name || 'N/A', comparisonMetrics?.topSpender?.name || 'N/A', ''])
 
     const csvContent = csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `stock-insights-${getPeriodLabel().replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `inventory-expenses-${getPeriodLabel().replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
 
     toast({
       title: "CSV Exported",
-      description: "Stock insights report has been downloaded as CSV.",
+      description: "Inventory expenses report has been downloaded as CSV.",
     })
   }
 
   const exportToExcel = () => {
     if (!currentMetrics) return
 
-    // Create comprehensive Excel data
     const excelData = {
       summary: currentMetrics,
       comparison: comparisonMetrics,
       period: getPeriodLabel(),
       generatedOn: new Date().toLocaleString(),
-      detailedPurchases: getDetailedPurchasesForPeriod()
+      detailedOrders: getDetailedOrdersForPeriod()
     }
 
     const jsonContent = JSON.stringify(excelData, null, 2)
@@ -251,16 +244,16 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `stock-insights-detailed-${getPeriodLabel().replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.json`
+    a.download = `inventory-expenses-detailed-${getPeriodLabel().replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.json`
     a.click()
 
     toast({
       title: "Excel Data Exported",
-      description: "Detailed stock insights report has been downloaded.",
+      description: "Detailed inventory expenses report has been downloaded.",
     })
   }
 
-  const getDetailedPurchasesForPeriod = () => {
+  const getDetailedOrdersForPeriod = () => {
     let startDate: Date, endDate: Date
 
     switch (dateFilter) {
@@ -283,7 +276,7 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
         return []
     }
 
-    return getFilteredPurchases(startDate, endDate)
+    return getFilteredPurchasedOrders(startDate, endDate)
   }
 
   const getPeriodLabel = () => {
@@ -309,19 +302,19 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
   const getChangeIcon = (current: number, previous?: number) => {
     if (!previous) return null
     const change = current - previous
-    if (change > 0) return <TrendingUp className="h-4 w-4 text-green-600" />
-    if (change < 0) return <TrendingDown className="h-4 w-4 text-red-600" />
+    if (change > 0) return <TrendingUp className="h-4 w-4 text-red-600" />
+    if (change < 0) return <TrendingDown className="h-4 w-4 text-green-600" />
     return null
   }
 
-  // Only allow Admin and Super Admin access
-  if (userType !== "admin" && userType !== "superadmin") {
+  // Only allow Super Admin access
+  if (userType !== "superadmin") {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center">
             <BarChart3 className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500">Stock Insights Dashboard is only available for Admin and Super Admin users.</p>
+            <p className="text-gray-500">Inventory Insights Dashboard is only available for Super Admin users.</p>
           </div>
         </CardContent>
       </Card>
@@ -334,10 +327,10 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-blue-600" />
-            Stock App Insights Dashboard
+            <BarChart3 className="h-6 w-6 text-purple-600" />
+            Inventory Insights Dashboard
           </h2>
-          <p className="text-gray-600 mt-1">Analyze stock purchase patterns and trends</p>
+          <p className="text-gray-600 mt-1">Analyze inventory expenses from purchased orders</p>
         </div>
 
         {/* Export Buttons */}
@@ -409,7 +402,7 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
             )}
 
             <div className="flex items-center">
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
                 Showing: {getPeriodLabel()}
               </Badge>
             </div>
@@ -422,8 +415,8 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-blue-600" />
-              This Month / Last Month Summary
+              <Package2 className="h-5 w-5 text-purple-600" />
+              Inventory Expenses Summary
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -432,7 +425,7 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-4 font-semibold bg-gray-50">Metric</th>
-                    <th className="text-center p-4 font-semibold bg-blue-50">{getPeriodLabel()}</th>
+                    <th className="text-center p-4 font-semibold bg-purple-50">{getPeriodLabel()}</th>
                     {comparisonMetrics && (
                       <>
                         <th className="text-center p-4 font-semibold bg-gray-50">
@@ -446,7 +439,7 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
                 <tbody>
                   <tr className="border-b hover:bg-gray-50">
                     <td className="p-4 font-medium">Total Items Purchased</td>
-                    <td className="p-4 text-center font-bold text-blue-600">
+                    <td className="p-4 text-center font-bold text-purple-600">
                       {currentMetrics.totalItemsPurchased}
                     </td>
                     {comparisonMetrics && (
@@ -456,8 +449,8 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
                           {getChangeIcon(currentMetrics.totalItemsPurchased, comparisonMetrics.totalItemsPurchased)}
                           <span className={
                             currentMetrics.totalItemsPurchased > comparisonMetrics.totalItemsPurchased
-                              ? "text-green-600" : currentMetrics.totalItemsPurchased < comparisonMetrics.totalItemsPurchased
-                              ? "text-red-600" : "text-gray-600"
+                              ? "text-red-600" : currentMetrics.totalItemsPurchased < comparisonMetrics.totalItemsPurchased
+                              ? "text-green-600" : "text-gray-600"
                           }>
                             {getChangeText(currentMetrics.totalItemsPurchased, comparisonMetrics.totalItemsPurchased)}
                           </span>
@@ -467,43 +460,21 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
                   </tr>
 
                   <tr className="border-b hover:bg-gray-50">
-                    <td className="p-4 font-medium">Total Quantity Purchased</td>
-                    <td className="p-4 text-center font-bold text-blue-600">
-                      {currentMetrics.totalQuantityPurchased.toFixed(1)} Ltr/Kg
+                    <td className="p-4 font-medium">Total Amount Spent (₹)</td>
+                    <td className="p-4 text-center font-bold text-purple-600">
+                      ₹{currentMetrics.totalAmountSpent.toLocaleString()}
                     </td>
                     {comparisonMetrics && (
                       <>
-                        <td className="p-4 text-center">{comparisonMetrics.totalQuantityPurchased.toFixed(1)} Ltr/Kg</td>
+                        <td className="p-4 text-center">₹{comparisonMetrics.totalAmountSpent.toLocaleString()}</td>
                         <td className="p-4 text-center flex items-center justify-center gap-2">
-                          {getChangeIcon(currentMetrics.totalQuantityPurchased, comparisonMetrics.totalQuantityPurchased)}
+                          {getChangeIcon(currentMetrics.totalAmountSpent, comparisonMetrics.totalAmountSpent)}
                           <span className={
-                            currentMetrics.totalQuantityPurchased > comparisonMetrics.totalQuantityPurchased
-                              ? "text-green-600" : currentMetrics.totalQuantityPurchased < comparisonMetrics.totalQuantityPurchased
-                              ? "text-red-600" : "text-gray-600"
+                            currentMetrics.totalAmountSpent > comparisonMetrics.totalAmountSpent
+                              ? "text-red-600" : currentMetrics.totalAmountSpent < comparisonMetrics.totalAmountSpent
+                              ? "text-green-600" : "text-gray-600"
                           }>
-                            {getChangeText(currentMetrics.totalQuantityPurchased, comparisonMetrics.totalQuantityPurchased)}
-                          </span>
-                        </td>
-                      </>
-                    )}
-                  </tr>
-
-                  <tr className="border-b hover:bg-gray-50">
-                    <td className="p-4 font-medium">Total Stock Value Purchased (₹)</td>
-                    <td className="p-4 text-center font-bold text-blue-600">
-                      ₹{currentMetrics.totalValuePurchased.toLocaleString()}
-                    </td>
-                    {comparisonMetrics && (
-                      <>
-                        <td className="p-4 text-center">₹{comparisonMetrics.totalValuePurchased.toLocaleString()}</td>
-                        <td className="p-4 text-center flex items-center justify-center gap-2">
-                          {getChangeIcon(currentMetrics.totalValuePurchased, comparisonMetrics.totalValuePurchased)}
-                          <span className={
-                            currentMetrics.totalValuePurchased > comparisonMetrics.totalValuePurchased
-                              ? "text-green-600" : currentMetrics.totalValuePurchased < comparisonMetrics.totalValuePurchased
-                              ? "text-red-600" : "text-gray-600"
-                          }>
-                            {getChangeText(currentMetrics.totalValuePurchased, comparisonMetrics.totalValuePurchased)}
+                            {getChangeText(currentMetrics.totalAmountSpent, comparisonMetrics.totalAmountSpent)}
                           </span>
                         </td>
                       </>
@@ -512,9 +483,9 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
 
                   <tr className="border-b hover:bg-gray-50">
                     <td className="p-4 font-medium">Most Purchased Item</td>
-                    <td className="p-4 text-center font-bold text-blue-600">
+                    <td className="p-4 text-center font-bold text-purple-600">
                       {currentMetrics.mostPurchasedItem 
-                        ? `${currentMetrics.mostPurchasedItem.name} (${currentMetrics.mostPurchasedItem.quantity} ${currentMetrics.mostPurchasedItem.unit})`
+                        ? `${currentMetrics.mostPurchasedItem.name} (₹${currentMetrics.mostPurchasedItem.amount})`
                         : "N/A"
                       }
                     </td>
@@ -522,28 +493,7 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
                       <>
                         <td className="p-4 text-center">
                           {comparisonMetrics.mostPurchasedItem 
-                            ? `${comparisonMetrics.mostPurchasedItem.name} (${comparisonMetrics.mostPurchasedItem.quantity} ${comparisonMetrics.mostPurchasedItem.unit})`
-                            : "N/A"
-                          }
-                        </td>
-                        <td className="p-4 text-center text-gray-500">-</td>
-                      </>
-                    )}
-                  </tr>
-
-                  <tr className="border-b hover:bg-gray-50">
-                    <td className="p-4 font-medium">Least Purchased Item</td>
-                    <td className="p-4 text-center font-bold text-blue-600">
-                      {currentMetrics.leastPurchasedItem 
-                        ? `${currentMetrics.leastPurchasedItem.name} (${currentMetrics.leastPurchasedItem.quantity} ${currentMetrics.leastPurchasedItem.unit})`
-                        : "N/A"
-                      }
-                    </td>
-                    {comparisonMetrics && (
-                      <>
-                        <td className="p-4 text-center">
-                          {comparisonMetrics.leastPurchasedItem 
-                            ? `${comparisonMetrics.leastPurchasedItem.name} (${comparisonMetrics.leastPurchasedItem.quantity} ${comparisonMetrics.leastPurchasedItem.unit})`
+                            ? `${comparisonMetrics.mostPurchasedItem.name} (₹${comparisonMetrics.mostPurchasedItem.amount})`
                             : "N/A"
                           }
                         </td>
@@ -553,13 +503,25 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
                   </tr>
 
                   <tr className="hover:bg-gray-50">
-                    <td className="p-4 font-medium">Top Supplier (optional)</td>
-                    <td className="p-4 text-center font-bold text-blue-600">
-                      {currentMetrics.topSupplier?.name || "N/A"}
+                    <td className="p-4 font-medium">Top Spender</td>
+                    <td className="p-4 text-center font-bold text-purple-600">
+                      {currentMetrics.topSpender?.name || "N/A"}
+                      {currentMetrics.topSpender && (
+                        <div className="text-xs text-gray-500">
+                          ₹{currentMetrics.topSpender.amount} ({currentMetrics.topSpender.orders} orders)
+                        </div>
+                      )}
                     </td>
                     {comparisonMetrics && (
                       <>
-                        <td className="p-4 text-center">{comparisonMetrics.topSupplier?.name || "N/A"}</td>
+                        <td className="p-4 text-center">
+                          {comparisonMetrics.topSpender?.name || "N/A"}
+                          {comparisonMetrics.topSpender && (
+                            <div className="text-xs text-gray-500">
+                              ₹{comparisonMetrics.topSpender.amount} ({comparisonMetrics.topSpender.orders} orders)
+                            </div>
+                          )}
+                        </td>
                         <td className="p-4 text-center text-gray-500">-</td>
                       </>
                     )}
@@ -579,9 +541,9 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Unique Items</p>
-                  <p className="text-2xl font-bold text-blue-600">{currentMetrics.uniqueItems}</p>
+                  <p className="text-2xl font-bold text-purple-600">{currentMetrics.uniqueItems}</p>
                 </div>
-                <Package className="h-8 w-8 text-blue-600" />
+                <Package2 className="h-8 w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
@@ -590,8 +552,8 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Avg Purchase Value</p>
-                  <p className="text-2xl font-bold text-green-600">₹{currentMetrics.averagePurchaseValue.toFixed(0)}</p>
+                  <p className="text-sm font-medium text-gray-600">Avg Order Value</p>
+                  <p className="text-2xl font-bold text-green-600">₹{currentMetrics.averageOrderValue.toFixed(0)}</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-green-600" />
               </div>
@@ -602,7 +564,7 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Purchase Transactions</p>
+                  <p className="text-sm font-medium text-gray-600">Purchase Orders</p>
                   <p className="text-2xl font-bold text-orange-600">{currentMetrics.purchaseCount}</p>
                 </div>
                 <ShoppingCart className="h-8 w-8 text-orange-600" />
@@ -614,14 +576,54 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Top Supplier Orders</p>
-                  <p className="text-2xl font-bold text-purple-600">{currentMetrics.topSupplier?.purchases || 0}</p>
+                  <p className="text-sm font-medium text-gray-600">Total Quantity</p>
+                  <p className="text-2xl font-bold text-blue-600">{currentMetrics.totalQuantityPurchased.toFixed(1)}</p>
                 </div>
-                <Users className="h-8 w-8 text-purple-600" />
+                <Users className="h-8 w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Detailed Orders Table */}
+      {currentMetrics && getDetailedOrdersForPeriod().length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Detailed Purchased Orders ({getDetailedOrdersForPeriod().length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Rate</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Ordered By</TableHead>
+                    <TableHead>Purchase Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {getDetailedOrdersForPeriod().map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.itemName}</TableCell>
+                      <TableCell>{order.quantity} {order.unit}</TableCell>
+                      <TableCell>₹{order.rate}</TableCell>
+                      <TableCell className="font-semibold text-green-600">₹{order.totalAmount}</TableCell>
+                      <TableCell>{order.orderedBy}</TableCell>
+                      <TableCell>{new Date(order.orderDate).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* No Data State */}
@@ -630,8 +632,8 @@ export function StockInsightsDashboard({ userType }: StockInsightsDashboardProps
           <CardContent className="flex items-center justify-center py-12">
             <div className="text-center">
               <BarChart3 className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500 mb-4">No stock purchase data found for the selected period.</p>
-              <p className="text-sm text-gray-400">Add some stock purchases to see insights here.</p>
+              <p className="text-gray-500 mb-4">No purchased inventory data found for the selected period.</p>
+              <p className="text-sm text-gray-400">Purchase some inventory orders to see insights here.</p>
             </div>
           </CardContent>
         </Card>
